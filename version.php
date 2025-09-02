@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_vibeyourcourse';
 $plugin->release = 'v1.0.0';
-$plugin->version = 2024120200; // YYYYMMDDXX format.
-$plugin->requires = 2024041600; // Moodle 4.4+ required.
+$plugin->version = 2025090200; 
+$plugin->requires = 2024041600; 
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->dependencies = [];

@@ -30,72 +30,18 @@ defined('MOODLE_INTERNAL') || die();
  * The mod_vibeyourcourse course module viewed event class.
  *
  * @package    mod_vibeyourcourse
- * @since      Moodle 3.9
- * @copyright  2024 Alexander Bias
+ * @copyright  2025 Alexander Mikasch
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_module_viewed extends \core\event\course_module_viewed {
 
     /**
      * Init method.
-     *
-     * @return void
      */
     protected function init() {
         $this->data['crud'] = 'r';
         $this->data['edulevel'] = self::LEVEL_PARTICIPATING;
         $this->data['objecttable'] = 'vibeyourcourse';
-    }
-
-    /**
-     * Return localised event name.
-     *
-     * @return string
-     */
-    public static function get_name() {
-        return get_string('eventcoursemoduleviewed', 'mod_vibeyourcourse');
-    }
-
-    /**
-     * Returns description of what happened.
-     *
-     * @return string
-     */
-    public function get_description() {
-        return "The user with id '$this->userid' viewed the vibeyourcourse activity with course module id '$this->contextinstanceid'.";
-    }
-
-    /**
-     * Get URL related to the action.
-     *
-     * @return \moodle_url
-     */
-    public function get_url() {
-        return new \moodle_url('/mod/vibeyourcourse/view.php', array('id' => $this->contextinstanceid));
-    }
-
-    /**
-     * Return the legacy event log data.
-     *
-     * @return array|null
-     */
-    protected function get_legacy_logdata() {
-        return array($this->courseid, 'vibeyourcourse', 'view',
-                     'view.php?id=' . $this->contextinstanceid, $this->objectid, $this->contextinstanceid);
-    }
-
-    /**
-     * Custom validation.
-     *
-     * @throws \coding_exception
-     * @return void
-     */
-    protected function validate_data() {
-        parent::validate_data();
-        // Make sure this class is never used without proper object details.
-        if (!$this->contextlevel === CONTEXT_MODULE) {
-            throw new \coding_exception('Context level must be CONTEXT_MODULE.');
-        }
     }
 
     public static function get_objectid_mapping() {

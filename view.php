@@ -24,6 +24,7 @@
 
 require(__DIR__.'/../../config.php');
 require_once(__DIR__.'/lib.php');
+require_once($CFG->libdir.'/completionlib.php');
 
 // Course_module ID.
 $id = optional_param('id', 0, PARAM_INT);
@@ -67,6 +68,9 @@ $PAGE->set_url('/mod/vibeyourcourse/view.php', array('id' => $cm->id));
 $PAGE->set_title(format_string($moduleinstance->name));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($modulecontext);
+
+// Load jQuery
+$PAGE->requires->jquery();
 
 echo $OUTPUT->header();
 
@@ -115,7 +119,7 @@ if (!$allowed_runtimes) {
                 <i class="fa fa-code fa-3x text-muted mb-3"></i>
                 <h4><?php echo get_string('startcoding', 'mod_vibeyourcourse'); ?></h4>
                 <p class="text-muted"><?php echo get_string('help_gettingstarted', 'mod_vibeyourcourse'); ?></p>
-                <button class="btn btn-primary btn-lg" onclick="createNewProject()">
+                <button class="btn btn-primary btn-lg" id="empty-state-new-project">
                     <?php echo get_string('newproject', 'mod_vibeyourcourse'); ?>
                 </button>
             </div>
@@ -142,11 +146,11 @@ if (!$allowed_runtimes) {
                                 </p>
                             </div>
                             <div class="card-footer">
-                                <button class="btn btn-sm btn-outline-primary" onclick="openProject(<?php echo $project->id; ?>)">
+                                <button class="btn btn-sm btn-outline-primary" data-action="open-project" data-project-id="<?php echo $project->id; ?>">
                                     <?php echo get_string('codeeditor', 'mod_vibeyourcourse'); ?>
                                 </button>
                                 <?php if ($project->status == 'completed'): ?>
-                                    <button class="btn btn-sm btn-success ml-1" onclick="viewProject(<?php echo $project->id; ?>)">
+                                    <button class="btn btn-sm btn-success ml-1" data-action="view-project" data-project-id="<?php echo $project->id; ?>">
                                         <?php echo get_string('preview', 'mod_vibeyourcourse'); ?>
                                     </button>
                                 <?php endif; ?>
@@ -166,13 +170,13 @@ if (!$allowed_runtimes) {
                     <h4 id="current-project-name">Project Name</h4>
                 </div>
                 <div class="col-md-6 text-right">
-                    <button class="btn btn-sm btn-outline-secondary" onclick="saveProject()">
+                    <button class="btn btn-sm btn-outline-secondary" id="save-project-btn">
                         <?php echo get_string('saveproject', 'mod_vibeyourcourse'); ?>
                     </button>
-                    <button class="btn btn-sm btn-primary ml-1" onclick="runCode()">
+                    <button class="btn btn-sm btn-primary ml-1" id="run-code-btn">
                         <?php echo get_string('runcode', 'mod_vibeyourcourse'); ?>
                     </button>
-                    <button class="btn btn-sm btn-secondary ml-1" onclick="closeIDE()">
+                    <button class="btn btn-sm btn-secondary ml-1" id="close-ide-btn">
                         <?php echo get_string('backtocourse', 'mod_vibeyourcourse'); ?>
                     </button>
                 </div>
@@ -230,7 +234,7 @@ if (!$allowed_runtimes) {
                                 <div id="ai-messages"></div>
                                 <div class="ai-input-container">
                                     <input type="text" id="ai-input" class="form-control" placeholder="Ask AI for help...">
-                                    <button class="btn btn-primary" onclick="sendAIMessage()">Send</button>
+                                    <button class="btn btn-primary" id="send-ai-message">Send</button>
                                 </div>
                             </div>
                         </div>
@@ -275,7 +279,7 @@ if (!$allowed_runtimes) {
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="createProject()">Create Project</button>
+                <button type="button" class="btn btn-primary" id="create-project-btn">Create Project</button>
             </div>
         </div>
     </div>
@@ -296,7 +300,12 @@ window.vibeyourcourseConfig = {
 
 // Basic JavaScript functions (will be expanded)
 function createNewProject() {
-    $('#new-project-modal').modal('show');
+    // Show the modal using native JavaScript
+    var modal = document.getElementById('new-project-modal');
+    if (modal) {
+        modal.style.display = 'block';
+        modal.classList.add('show');
+    }
 }
 
 function createProject() {
@@ -320,14 +329,91 @@ function runCode() {
 }
 
 function closeIDE() {
-    $('#ide-container').addClass('d-none');
-    $('.vibeyourcourse-projects').removeClass('d-none');
+    var ideContainer = document.getElementById('ide-container');
+    var projectsContainer = document.querySelector('.vibeyourcourse-projects');
+    
+    if (ideContainer) {
+        ideContainer.classList.add('d-none');
+    }
+    if (projectsContainer) {
+        projectsContainer.classList.remove('d-none');
+    }
+}
+
+// Close modal function
+function closeModal() {
+    var modal = document.getElementById('new-project-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+    }
 }
 
 // Initialize when page loads
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
     console.log('Vibe Your Course initialized');
     console.log('Config:', window.vibeyourcourseConfig);
+    
+    // Add event listener for the new project button
+    var newProjectBtn = document.getElementById('new-project-btn');
+    if (newProjectBtn) {
+        newProjectBtn.addEventListener('click', createNewProject);
+    }
+    
+    // Add event listener for empty state new project button
+    var emptyStateBtn = document.getElementById('empty-state-new-project');
+    if (emptyStateBtn) {
+        emptyStateBtn.addEventListener('click', createNewProject);
+    }
+    
+    // Add event listener for create project button
+    var createProjectBtn = document.getElementById('create-project-btn');
+    if (createProjectBtn) {
+        createProjectBtn.addEventListener('click', createProject);
+    }
+    
+    // Add event listeners for IDE buttons
+    var saveBtn = document.getElementById('save-project-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveProject);
+    }
+    
+    var runBtn = document.getElementById('run-code-btn');
+    if (runBtn) {
+        runBtn.addEventListener('click', runCode);
+    }
+    
+    var closeBtn = document.getElementById('close-ide-btn');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeIDE);
+    }
+    
+    // Add event listener for AI send button
+    var aiSendBtn = document.getElementById('send-ai-message');
+    if (aiSendBtn) {
+        aiSendBtn.addEventListener('click', function() {
+            // sendAIMessage function to be implemented
+            console.log('Sending AI message...');
+        });
+    }
+    
+    // Add event listeners for project action buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.matches('[data-action="open-project"]')) {
+            var projectId = e.target.getAttribute('data-project-id');
+            openProject(projectId);
+        } else if (e.target.matches('[data-action="view-project"]')) {
+            var projectId = e.target.getAttribute('data-project-id');
+            // viewProject function to be implemented
+            console.log('Viewing project:', projectId);
+        }
+    });
+    
+    // Add event listener for modal close buttons
+    var closeButtons = document.querySelectorAll('[data-dismiss="modal"]');
+    closeButtons.forEach(function(button) {
+        button.addEventListener('click', closeModal);
+    });
 });
 </script>
 
@@ -403,6 +489,41 @@ $(document).ready(function() {
 
 .empty-state {
     margin-top: 50px;
+}
+
+/* Modal styles for proper display */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1050;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal.show {
+    display: block;
+}
+
+.modal-dialog {
+    position: relative;
+    width: auto;
+    margin: 1.75rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 10%;
+}
+
+.modal-content {
+    position: relative;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.2);
+    border-radius: 0.3rem;
+    box-shadow: 0 0.25rem 0.5rem rgba(0,0,0,.5);
 }
 </style>
 
