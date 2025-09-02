@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<XMLDB PATH="mod/vibeyourcourse/db" VERSION="20241202" COMMENT="XMLDB file for Moodle mod/vibeyourcourse"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
+>
+  <TABLES>
+    <!-- Main vibeyourcourse activity table -->
+    <TABLE NAME="vibeyourcourse" COMMENT="Main table for vibeyourcourse activity instances">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="course" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="name" TYPE="char" LENGTH="1333" NOTNULL="true" SEQUENCE="false" COMMENT="The name of the vibeyourcourse activity"/>
+        <FIELD NAME="intro" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="The description of the activity"/>
+        <FIELD NAME="introformat" TYPE="int" LENGTH="4" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="The maximum grade for this activity"/>
+        
+        <!-- Runtime Configuration -->
+        <FIELD NAME="allowed_runtimes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of allowed runtimes (python, javascript, webcontainer)"/>
+        
+        <!-- AI Configuration -->
+        <FIELD NAME="ai_provider" TYPE="char" LENGTH="50" NOTNULL="true" DEFAULT="openai" SEQUENCE="false" COMMENT="AI provider (openai, anthropic, disabled)"/>
+        <FIELD NAME="ai_assistance_level" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="hints" SEQUENCE="false" COMMENT="Level of AI assistance (full, hints, minimal, none)"/>
+        
+        <!-- Learning Configuration -->
+        <FIELD NAME="difficulty_level" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="adaptive" SEQUENCE="false" COMMENT="Difficulty level (beginner, intermediate, advanced, adaptive)"/>
+        <FIELD NAME="project_templates" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON object containing project templates"/>
+        
+        <!-- Assessment Configuration -->
+        <FIELD NAME="auto_assessment" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Enable automatic assessment"/>
+        <FIELD NAME="peer_review" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Enable peer review"/>
+        
+        <!-- Standard timestamps -->
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="course" UNIQUE="false" FIELDS="course"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Student projects table -->
+    <TABLE NAME="vibeyourcourse_projects" COMMENT="Student projects within vibeyourcourse activities">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="vibeyourcourse_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to vibeyourcourse activity"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User who created this project"/>
+        <FIELD NAME="project_name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Name of the project"/>
+        <FIELD NAME="runtime_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="Runtime type (python, javascript, webcontainer)"/>
+        <FIELD NAME="template_id" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false" COMMENT="ID of the template used"/>
+        
+        <!-- Project files as JSON -->
+        <FIELD NAME="project_files" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON object containing all project files"/>
+        
+        <!-- Project status -->
+        <FIELD NAME="status" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="draft" SEQUENCE="false" COMMENT="Project status (draft, active, completed, archived)"/>
+        <FIELD NAME="completion_percentage" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Project completion percentage"/>
+        
+        <!-- AI interaction tracking -->
+        <FIELD NAME="ai_hints_used" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of AI hints used"/>
+        <FIELD NAME="ai_generations_used" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of AI code generations used"/>
+        
+        <!-- Grading -->
+        <FIELD NAME="grade" TYPE="int" LENGTH="10" NOTNULL="false" DEFAULT="0" SEQUENCE="false" COMMENT="Current grade for this project"/>
+        <FIELD NAME="feedback" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Feedback from teacher or AI"/>
+        
+        <!-- Timestamps -->
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+        <FIELD NAME="timesubmitted" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="When project was submitted for grading"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="vibeyourcourse_fk" TYPE="foreign" FIELDS="vibeyourcourse_id" REFTABLE="vibeyourcourse" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="vibeyourcourse_user" UNIQUE="false" FIELDS="vibeyourcourse_id,userid"/>
+        <INDEX NAME="status" UNIQUE="false" FIELDS="status"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Code execution history table -->
+    <TABLE NAME="vibeyourcourse_executions" COMMENT="History of code executions">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="project_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to project"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User who executed the code"/>
+        
+        <!-- Execution details -->
+        <FIELD NAME="runtime_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="Runtime used (python, javascript, webcontainer)"/>
+        <FIELD NAME="code_snapshot" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Code that was executed"/>
+        <FIELD NAME="execution_output" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Output from code execution"/>
+        <FIELD NAME="execution_errors" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Errors from code execution"/>
+        <FIELD NAME="execution_success" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Whether execution was successful"/>
+        
+        <!-- Performance metrics -->
+        <FIELD NAME="execution_time_ms" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Execution time in milliseconds"/>
+        <FIELD NAME="memory_used_mb" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Memory used in megabytes"/>
+        
+        <!-- AI assistance during execution -->
+        <FIELD NAME="ai_hint_requested" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Whether AI hint was requested"/>
+        <FIELD NAME="ai_hint_response" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="AI hint response if requested"/>
+        
+        <!-- Timestamp -->
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="project_fk" TYPE="foreign" FIELDS="project_id" REFTABLE="vibeyourcourse_projects" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="project_time" UNIQUE="false" FIELDS="project_id,timecreated"/>
+        <INDEX NAME="user_time" UNIQUE="false" FIELDS="userid,timecreated"/>
+        <INDEX NAME="success" UNIQUE="false" FIELDS="execution_success"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- AI interactions table -->
+    <TABLE NAME="vibeyourcourse_ai_interactions" COMMENT="Tracking of AI interactions for analytics">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="project_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to project"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User who interacted with AI"/>
+        
+        <!-- Interaction details -->
+        <FIELD NAME="interaction_type" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="Type of interaction (hint, generation, debug, review)"/>
+        <FIELD NAME="user_prompt" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="User's prompt or question"/>
+        <FIELD NAME="ai_response" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="AI's response"/>
+        <FIELD NAME="context_code" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Code context at time of interaction"/>
+        
+        <!-- AI provider details -->
+        <FIELD NAME="ai_provider" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false" COMMENT="AI provider used"/>
+        <FIELD NAME="ai_model" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false" COMMENT="Specific AI model used"/>
+        <FIELD NAME="tokens_used" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Tokens consumed"/>
+        
+        <!-- Quality metrics -->
+        <FIELD NAME="user_rating" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false" COMMENT="User rating of AI response (1-5)"/>
+        <FIELD NAME="was_helpful" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false" COMMENT="Whether user found response helpful"/>
+        
+        <!-- Timestamp -->
+        <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="project_fk" TYPE="foreign" FIELDS="project_id" REFTABLE="vibeyourcourse_projects" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="project_type" UNIQUE="false" FIELDS="project_id,interaction_type"/>
+        <INDEX NAME="user_time" UNIQUE="false" FIELDS="userid,timecreated"/>
+        <INDEX NAME="provider" UNIQUE="false" FIELDS="ai_provider"/>
+      </INDEXES>
+    </TABLE>
+
+    <!-- Learning analytics table -->
+    <TABLE NAME="vibeyourcourse_analytics" COMMENT="Learning analytics and progress tracking">
+      <FIELDS>
+        <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="project_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to project"/>
+        <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User being tracked"/>
+        
+        <!-- Time tracking -->
+        <FIELD NAME="total_time_spent" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total time spent on project in seconds"/>
+        <FIELD NAME="active_coding_time" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Active coding time in seconds"/>
+        
+        <!-- Error tracking -->
+        <FIELD NAME="total_errors" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Total number of errors encountered"/>
+        <FIELD NAME="errors_resolved" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Number of errors resolved"/>
+        <FIELD NAME="avg_error_resolution_time" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Average time to resolve errors in seconds"/>
+        
+        <!-- Skill progression -->
+        <FIELD NAME="skill_level" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="beginner" SEQUENCE="false" COMMENT="Current assessed skill level"/>
+        <FIELD NAME="concepts_mastered" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of mastered concepts"/>
+        <FIELD NAME="concepts_struggling" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of concepts user struggles with"/>
+        
+        <!-- Interaction patterns -->
+        <FIELD NAME="help_seeking_frequency" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Percentage of time user seeks help"/>
+        <FIELD NAME="independent_problem_solving" TYPE="int" LENGTH="3" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Percentage of problems solved independently"/>
+        
+        <!-- Timestamps -->
+        <FIELD NAME="last_updated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+        <KEY NAME="project_fk" TYPE="foreign" FIELDS="project_id" REFTABLE="vibeyourcourse_projects" REFFIELDS="id"/>
+        <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="project_user" UNIQUE="true" FIELDS="project_id,userid"/>
+        <INDEX NAME="skill_level" UNIQUE="false" FIELDS="skill_level"/>
+      </INDEXES>
+    </TABLE>
+
+  </TABLES>
+</XMLDB>
