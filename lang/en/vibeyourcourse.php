@@ -19,7 +19,7 @@
  *
  * @package     mod_vibeyourcourse
  * @category    string
- * @copyright   2024 Alexander Bias
+ * @copyright   2025 Alexander Mikasch
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -195,3 +195,6 @@ $string['vibeyourcourse:submit'] = 'Submit projects in Vibe Your Course';
 $string['vibeyourcourse:grade'] = 'Grade Vibe Your Course submissions';
 $string['vibeyourcourse:viewall'] = 'View all student projects';
 $string['vibeyourcourse:manage'] = 'Manage Vibe Your Course activity settings';
+
+// Events
+$string['eventcoursemoduleviewed'] = 'Course module viewed';

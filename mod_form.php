@@ -18,7 +18,7 @@
  * The main mod_vibeyourcourse configuration form.
  *
  * @package     mod_vibeyourcourse
- * @copyright   2024 Alexander Bias
+ * @copyright   2025 Alexander Mikasch
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -30,7 +30,7 @@ require_once($CFG->dirroot.'/course/moodleform_mod.php');
  * Module instance settings form.
  *
  * @package    mod_vibeyourcourse
- * @copyright  2024 Alexander Bias
+ * @copyright  2025 Alexander Mikasch
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mod_vibeyourcourse_mod_form extends moodleform_mod {

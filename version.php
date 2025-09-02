@@ -18,7 +18,7 @@
  * Plugin version and other meta-data are defined here.
  *
  * @package     mod_vibeyourcourse
- * @copyright   2024 Alexander Bias
+ * @copyright   2025 Alexander Mikasch
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
