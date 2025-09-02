@@ -1,267 +1,337 @@
-# TODO: Moodle Module "Vibe Your Course"
+# TODO: Interactive Code Learning Platform "Vibe Your Course"
 
-## 📋 Projektübersicht
-Entwicklung eines KI-gestützten Moodle-Plugins mit LTI-Integration und moderner SPA-Frontend-Architektur.
+## 🎯 **Vision: Students build & run real apps in browser**
+KI-gestütztes Moodle-Plugin wo Studenten **eigene lauffähige Anwendungen** entwickeln können - von Todo-Apps bis Data Science Dashboards.
 
 ---
 
-## 🎯 Phase 1: Grundlegendes Setup & Infrastruktur
+## �� **Architektur-Überblick**
+
+```
+Moodle Plugin ◄─► KI APIs ◄─► Browser Runtime (Pyodide/WebContainer)
+     ↓               ↓                    ↓
+• User Management   • Code Gen       • Python/JS Execution  
+• Progress Track    • Hints & Tips   • Live App Preview
+• Grading          • Error Analysis  • File System
+```
+
+---
+
+## 🎯 Phase 1: Foundation & Basic Code Execution (2-3 Wochen)
 
 ### ✅ Abgeschlossen
 - [x] Git-Repository und Submodule-Setup
-- [x] Projekt-README mit ausführlicher Beschreibung
+- [x] Projekt-README mit Beschreibung
+- [x] Architektur-Dokumentation (revised)
 
-### 🔄 In Arbeit
-- [ ] **Datenbank-Schema Design**
-  - [ ] Haupttabellen für mod_vibeyourcourse definieren
-  - [ ] Install/Upgrade SQL-Skripte erstellen
-  - [ ] Backup/Restore Kompatibilität sicherstellen
+### 🔄 In Arbeit - Moodle Plugin Core
+- [ ] **🏗 Basis Plugin-Struktur**
+  - [ ] `version.php` - Plugin metadata
+  - [ ] `lib.php` - Core Moodle functions  
+  - [ ] `mod_form.php` - Activity settings
+  - [ ] `view.php` - Main IDE interface
+  - [ ] `ajax.php` - API endpoints
 
-### ⏳ Geplant
-- [ ] **Plugin-Grundstruktur**
-  - [ ] Moodle Plugin-Skeleton erstellen
-  - [ ] Grundlegende Verzeichnisstruktur aufbauen
-  - [ ] version.php und Plugin-Metadaten definieren
+- [ ] **🗃 Datenbank-Schema**
+  ```sql
+  mdl_vibeyourcourse:
+  - id, course, name, intro
+  - ai_config (JSON)
+  - allowed_runtimes (JSON: python, web, etc.)
+  
+  mdl_vibeyourcourse_projects:
+  - id, vibeyourcourse_id, userid
+  - project_name, runtime_type
+  - files (JSON), last_modified
+  
+  mdl_vibeyourcourse_executions:
+  - id, project_id, code, output
+  - execution_time, success
+  ```
+
+### ⏳ Geplant - Frontend IDE
+- [ ] **🎨 SPA Frontend Setup**
+  - [ ] React/Vue app in `frontend/` folder
+  - [ ] Webpack build pipeline
+  - [ ] Integration with Moodle
+  - [ ] Responsive IDE layout
+
+- [ ] **💻 Code Editor Integration**
+  - [ ] CodeMirror 6 setup
+  - [ ] Syntax highlighting (Python, JS, HTML, CSS)
+  - [ ] Auto-completion
+  - [ ] Error highlighting
+
+- [ ] **🐍 Pyodide Integration (Python Runtime)**
+  - [ ] Pyodide worker setup
+  - [ ] Package management (pandas, numpy, matplotlib)
+  - [ ] Code execution & output capture
+  - [ ] Error handling & display
 
 ---
 
-## 🎯 Phase 2: Core Plugin-Entwicklung
+## 🎯 Phase 2: KI-Integration & Code Generation (2 Wochen)
 
-### 📁 Plugin-Architektur
-- [ ] **Ordnerstruktur**
-  ```
-  mod/vibeyourcourse/
-  ├── backup/               # Backup/Restore Funktionalität
-  ├── classes/              # Core PHP Klassen
-  │   ├── local/           # Lokale Klassen
-  │   ├── output/          # Renderer Klassen
-  │   └── privacy/         # GDPR/Privacy Klassen
-  ├── db/                  # Datenbankdefinitionen
-  ├── lang/en/             # Sprachdateien
-  ├── pix/                 # Icons und Grafiken
-  ├── templates/           # Mustache Templates
-  └── tests/               # Unit/Integration Tests
-  ```
-
-### 🛠 Core-Komponenten
-- [ ] **lib.php - Hauptfunktionen**
-  - [ ] `vibeyourcourse_add_instance()`
-  - [ ] `vibeyourcourse_update_instance()`
-  - [ ] `vibeyourcourse_delete_instance()`
-  - [ ] `vibeyourcourse_supports()` - Feature Support
-
-- [ ] **mod_form.php - Konfigurationsformular**
-  - [ ] Grundeinstellungen für Kursaktivität
-  - [ ] KI-Prompt-Konfiguration
-  - [ ] LTI-Tool-Settings
-
-- [ ] **view.php - Hauptansicht**
-  - [ ] LTI-Launch Mechanismus
-  - [ ] Benutzer-Authentifizierung
-  - [ ] Content-Rendering
-
-### 🗃 Datenbank-Design
-- [ ] **Haupttabelle: `mdl_vibeyourcourse`**
-  ```sql
-  - id (int, auto_increment)
-  - course (int, foreign_key)
-  - name (varchar)
-  - intro (text)
-  - introformat (int)
-  - timecreated (int)
-  - timemodified (int)
-  - ai_config (text, JSON)
-  ```
-
-- [ ] **Benutzer-Interaktionen: `mdl_vibeyourcourse_sessions`**
-  ```sql
-  - id (int, auto_increment)
-  - vibeyourcourse_id (int, foreign_key)
-  - userid (int, foreign_key)
-  - session_data (text, JSON)
-  - created_at (int)
-  - updated_at (int)
-  ```
-
-- [ ] **Generated Content: `mdl_vibeyourcourse_content`**
-  ```sql
-  - id (int, auto_increment)
-  - session_id (int, foreign_key)
-  - prompt_id (varchar)
-  - content_type (varchar)
-  - content_data (text, JSON)
-  - generated_at (int)
-  ```
-
----
-
-## 🎯 Phase 3: LTI-Integration & Frontend
-
-### 🔗 LTI Provider Setup
-- [ ] **LTI-Tool Konfiguration**
-  - [ ] LTI 1.3 Provider implementieren
-  - [ ] Deep Linking Support
-  - [ ] Grade Passback Integration
-  - [ ] Security Implementation (OAuth, Signatures)
-
-- [ ] **LTI Launch Handler**
-  - [ ] Launch-URL Endpoint
-  - [ ] Parameter Validation
-  - [ ] User Context Mapping
-  - [ ] Course Context Übertragung
-
-### 🖥 Frontend SPA Development
-- [ ] **Technologie-Stack festlegen**
-  - [ ] Framework wählen (React/Vue/Angular)
-  - [ ] Build-System konfigurieren
-  - [ ] API-Client Setup
-
-- [ ] **Core Components**
-  - [ ] Authentication Component
-  - [ ] Prompt Input Interface
-  - [ ] Content Display Area
-  - [ ] Progress Tracking
-  - [ ] Settings Panel
-
-### 📡 API-Endpoints
-- [ ] **REST API für Frontend**
-  - [ ] `/api/prompts` - Prompt Management
-  - [ ] `/api/content` - Content CRUD
-  - [ ] `/api/sessions` - Session Management
-  - [ ] `/api/progress` - Progress Tracking
-
----
-
-## 🎯 Phase 4: KI-Integration & Content-Generierung
-
-### 🤖 KI-Service Integration
-- [ ] **Prompt-System**
-  - [ ] JSON-Blueprint Struktur definieren
-  - [ ] Template Engine implementieren
-  - [ ] Variable Substitution
-  - [ ] Context-aware Prompting
-
-- [ ] **Content Generation**
-  - [ ] API-Integration (OpenAI/Claude/etc.)
-  - [ ] Content Validation
-  - [ ] Multi-Modal Support
-  - [ ] Caching Strategy
-
-### 📋 Prompt-Blueprints (JSON-Vorlagen)
-- [ ] **Basis-Templates**
-  ```json
-  {
-    "id": "basic_lesson",
-    "name": "Grundlegende Lektion",
-    "template": "Erstelle eine Lektion über {topic} für {target_audience}",
-    "variables": ["topic", "target_audience"],
-    "output_format": "structured_html"
+### 🤖 KI-Powered Features
+- [ ] **Code Generation Engine**
+  ```php
+  class ai_code_generator {
+      public function generate_app($prompt, $difficulty, $runtime) {
+          // "Create a todo app for beginners"
+          // → Full project with HTML/JS/CSS
+      }
+      
+      public function provide_hint($code, $error, $context) {
+          // Analyze current code + error
+          // → Specific help suggestion
+      }
   }
   ```
 
-- [ ] **Spezielle Templates**
-  - [ ] Quiz-Generierung
-  - [ ] Case Studies
-  - [ ] Interactive Scenarios
-  - [ ] Assessment Rubrics
+- [ ] **Smart Templates System**
+  ```json
+  {
+      "python_data_analysis": {
+          "template": "import pandas as pd\n# {task_description}",
+          "packages": ["pandas", "matplotlib", "seaborn"],
+          "challenges": ["Load data", "Create plots", "Export results"]
+      },
+      "web_todo_app": {
+          "files": {
+              "index.html": "<!DOCTYPE html>...",
+              "app.js": "// Todo logic here",
+              "style.css": "/* Beautiful styling */"
+          },
+          "challenges": ["Add todos", "Mark complete", "Persist data"]
+      }
+  }
+  ```
+
+- [ ] **Real-time AI Assistant**
+  - [ ] Chat interface in IDE
+  - [ ] Context-aware code help
+  - [ ] Error explanation & fixes
+  - [ ] Learning progress adaptation
+
+### 🔌 API Integration
+- [ ] **OpenAI/Claude Integration**
+  - [ ] Secure API key management
+  - [ ] Code-specific prompts
+  - [ ] Rate limiting & caching
+  - [ ] Fallback strategies
 
 ---
 
-## 🎯 Phase 5: Testing & Quality Assurance
+## 🎯 Phase 3: Advanced Runtimes & Features (2 Wochen)
 
-### 🧪 Testing Strategy
-- [ ] **Unit Tests**
-  - [ ] Plugin Core Functions
-  - [ ] Database Operations
-  - [ ] API Endpoints
-  - [ ] LTI Integration
+### 🌐 WebContainer Integration (Web Development)
+- [ ] **Full Web Stack in Browser**
+  ```javascript
+  const webcontainer = await WebContainer.boot();
+  
+  // Student creates React/Vue/Node.js apps
+  await webcontainer.spawn('npm', ['create', 'react-app', 'my-app']);
+  await webcontainer.spawn('npm', ['run', 'dev']);
+  
+  // Live preview URL for student's app
+  const preview = await webcontainer.preview;
+  ```
 
-- [ ] **Integration Tests**
-  - [ ] Moodle Integration
-  - [ ] LTI Tool Compatibility
-  - [ ] Cross-Browser Testing
-  - [ ] Mobile Responsiveness
+- [ ] **Supported Frameworks**
+  - [ ] Vanilla HTML/JS/CSS
+  - [ ] React applications
+  - [ ] Vue.js projects  
+  - [ ] Node.js backends
+  - [ ] Express servers
 
-### 🔍 Code Quality
-- [ ] **Code Standards**
-  - [ ] Moodle Coding Guidelines
-  - [ ] PHP CodeSniffer Integration
-  - [ ] ESLint für Frontend
-  - [ ] Documentation Standards
+### 📊 Advanced Python Features
+- [ ] **Data Science Stack**
+  - [ ] Jupyter-like notebook interface
+  - [ ] Interactive plots (Plotly)
+  - [ ] Data upload & processing
+  - [ ] Export capabilities
 
----
+- [ ] **Machine Learning Support**
+  - [ ] Scikit-learn integration
+  - [ ] Simple ML model training
+  - [ ] Visualization of results
 
-## 🎯 Phase 6: Deployment & Documentation
+### 🎮 Interactive Learning Features
+- [ ] **Progressive Challenges**
+  - [ ] Step-by-step coding tasks
+  - [ ] Automated testing/validation
+  - [ ] Hint system
+  - [ ] Achievement unlocks
 
-### 📦 Packaging & Distribution
-- [ ] **Plugin Package**
-  - [ ] ZIP-Distribution erstellen
-  - [ ] Abhängigkeiten dokumentieren
-  - [ ] Installation Guide
-  - [ ] Upgrade Path definieren
-
-### 📚 Dokumentation
-- [ ] **Benutzer-Dokumentation**
-  - [ ] Administrator Guide
-  - [ ] Teacher Guide
-  - [ ] Student Guide
-  - [ ] Troubleshooting
-
-- [ ] **Entwickler-Dokumentation**
-  - [ ] API Documentation
-  - [ ] Plugin Architecture
-  - [ ] Extension Points
-  - [ ] Contributing Guidelines
-
----
-
-## 🏷 Labels & Prioritäten
-
-**Priorität:**
-- 🔥 **Kritisch** - Blockiert andere Entwicklung
-- ⚡ **Hoch** - Wichtig für MVP
-- 📋 **Normal** - Standard Feature
-- 💡 **Nice-to-have** - Verbesserung
-
-**Status:**
-- ✅ **Abgeschlossen**
-- 🔄 **In Arbeit**
-- ⏳ **Geplant**
-- 🚫 **Blockiert**
-- 💭 **Brainstorming**
-
-**Geschätzter Aufwand:**
-- 🕐 **S** (1-2 Tage)
-- 🕕 **M** (3-5 Tage)
-- 🕘 **L** (1-2 Wochen)
-- 🕛 **XL** (2+ Wochen)
+- [ ] **Project Gallery**
+  - [ ] Student project showcase
+  - [ ] Code sharing & review
+  - [ ] Collaborative features
+  - [ ] Teacher feedback system
 
 ---
 
-## 📊 Meilensteine
+## 🎯 Phase 4: Learning Analytics & Gamification (1 Woche)
 
-### 🏁 Milestone 1: Plugin Foundation (Woche 1-2)
-- Grundlegendes Plugin-Setup
-- Datenbank-Schema
-- Basis-Funktionalität
+### 📈 Progress Tracking
+- [ ] **Learning Analytics**
+  ```php
+  class learning_analytics {
+      public function track_coding_session($project_id, $actions) {
+          // Time spent coding
+          // Errors encountered & resolved
+          // KI hints used
+          // Challenges completed
+      }
+      
+      public function generate_progress_report($user_id) {
+          // Skills development graph
+          // Areas for improvement
+          // Suggested next challenges
+      }
+  }
+  ```
 
-### 🏁 Milestone 2: LTI Integration (Woche 3-4)
-- LTI Provider Implementation
-- Frontend SPA Setup
-- Basis API
+- [ ] **Adaptive Difficulty**
+  - [ ] Performance-based challenge adjustment
+  - [ ] Personalized learning paths
+  - [ ] Smart content recommendations
 
-### 🏁 Milestone 3: KI-Integration (Woche 5-6)
-- Prompt-System
-- Content Generation
-- Template Engine
+### 🏆 Gamification System
+- [ ] **Achievement System**
+  - [ ] "First Python Script" badge
+  - [ ] "Web Dev Master" achievement
+  - [ ] "Bug Squasher" for error fixes
+  - [ ] "AI Collaborator" for KI usage
 
-### 🏁 Milestone 4: Testing & Polish (Woche 7-8)
-- Comprehensive Testing
-- Performance Optimization
-- Documentation
-- Release Preparation
+- [ ] **Leaderboards & Social**
+  - [ ] Course-wide coding challenges
+  - [ ] Peer code reviews
+  - [ ] Collaboration features
 
 ---
 
-*Letzte Aktualisierung: $(date)*
-*Status: Foundation Phase - Repository Setup abgeschlossen*
+## 🎯 Phase 5: Production & Performance (1 Woche)
+
+### ⚡ Performance Optimization
+- [ ] **Code Execution Optimization**
+  - [ ] Worker thread management
+  - [ ] Memory usage optimization
+  - [ ] Execution time limits
+  - [ ] Resource monitoring
+
+- [ ] **Frontend Performance**
+  - [ ] Code splitting & lazy loading
+  - [ ] IDE responsiveness
+  - [ ] Large file handling
+  - [ ] Mobile optimization
+
+### 🔒 Security & Compliance
+- [ ] **Sandbox Security**
+  - [ ] Code execution isolation
+  - [ ] Network access restrictions
+  - [ ] File system limitations
+  - [ ] Malicious code detection
+
+- [ ] **Data Privacy**
+  - [ ] GDPR compliance
+  - [ ] Student data protection
+  - [ ] Code ownership rights
+  - [ ] Secure KI API usage
+
+### 🧪 Testing & QA
+- [ ] **Comprehensive Testing**
+  - [ ] Unit tests (PHP backend)
+  - [ ] Frontend component tests
+  - [ ] Integration tests (Moodle)
+  - [ ] Runtime execution tests
+  - [ ] Performance benchmarks
+
+---
+
+## 🛠 **Konkrete Learning Scenarios**
+
+### 🐍 **Python Learning Path**
+1. **"Hello Analytics"** → Load CSV, create basic plot
+2. **"Data Detective"** → Pandas filtering & analysis  
+3. **"Visualization Master"** → Interactive dashboards
+4. **"ML Explorer"** → First machine learning model
+
+### 🌐 **Web Development Path**
+1. **"Static Site"** → HTML/CSS basics
+2. **"Interactive Page"** → JavaScript functionality
+3. **"Todo Application"** → Full CRUD app
+4. **"React Component"** → Modern framework usage
+
+### 🎯 **Project-Based Challenges**
+```json
+{
+    "financial_calculator": {
+        "description": "Build a compound interest calculator",
+        "runtime": "web",
+        "difficulty": "beginner",
+        "estimated_time": "45 minutes",
+        "skills": ["JavaScript", "HTML Forms", "Math Functions"],
+        "ai_starter_prompt": "Create a financial calculator that helps students understand compound interest"
+    },
+    
+    "weather_dashboard": {
+        "description": "Analyze weather data with Python",
+        "runtime": "python", 
+        "difficulty": "intermediate",
+        "estimated_time": "90 minutes",
+        "skills": ["Pandas", "APIs", "Data Visualization"],
+        "ai_starter_prompt": "Build a weather analysis tool using real climate data"
+    }
+}
+```
+
+---
+
+## 📊 **Success Metrics**
+
+### Student Engagement
+- [ ] Time spent coding per session
+- [ ] Number of completed projects
+- [ ] KI interaction frequency
+- [ ] Peer code sharing rate
+
+### Learning Outcomes  
+- [ ] Skill progression tracking
+- [ ] Error resolution improvement
+- [ ] Code quality metrics
+- [ ] Creative project complexity
+
+### Technical Performance
+- [ ] Code execution latency < 2s
+- [ ] IDE responsiveness < 100ms
+- [ ] 99% uptime for core features
+- [ ] Mobile usability score > 85
+
+---
+
+## 🏷 **Priority Labels**
+
+**🔥 Critical** - Core functionality
+**⚡ High** - Key learning features  
+**📋 Normal** - Enhancement features
+**💡 Nice-to-have** - Advanced features
+
+**🕐 S** (1-2 days) **🕕 M** (3-5 days) **🕘 L** (1-2 weeks) **🕛 XL** (2+ weeks)
+
+---
+
+## 🎯 **Next Immediate Actions**
+
+1. **🔥 Create basic Moodle plugin structure** (🕐 S)
+2. **🔥 Setup database schema** (🕐 S)  
+3. **⚡ Integrate CodeMirror editor** (🕕 M)
+4. **⚡ Basic Pyodide Python execution** (🕕 M)
+5. **📋 KI code generation prototype** (🕘 L)
+
+---
+
+*"From idea to running app in minutes, not months"* 🚀
+
+*Status: Architecture Revised - Ready for hands-on development*
+*Last Updated: $(date)*
