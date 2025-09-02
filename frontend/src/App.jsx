@@ -77,6 +77,39 @@ function App() {
     }
   }
 
+  const fetchProjectFiles = async (projectId) => {
+    if (!config || !projectId) return
+
+    try {
+      console.log('Lade Projektdateien für Projekt ID:', projectId)
+      
+      const response = await fetch('/mod/vibeyourcourse/ajax.php?' + new URLSearchParams({
+        action: 'get_project',
+        cmid: config.cmid,
+        project_id: projectId
+      }))
+
+      const result = await response.json()
+      
+      if (result.success && result.project.project_files) {
+        console.log('Projektdateien geladen:', result.project.project_files)
+        setProjectFiles(result.project.project_files)
+        
+        // Automatisch erste Datei auswählen
+        const firstFileName = Object.keys(result.project.project_files)[0]
+        if (firstFileName) {
+          setCurrentFile(firstFileName)
+        }
+      } else {
+        console.error('Fehler beim Laden der Projektdateien:', result.error)
+        setProjectFiles({ 'error.txt': 'Projektdateien konnten nicht geladen werden.' })
+      }
+    } catch (error) {
+      console.error('Netzwerkfehler beim Laden der Projektdateien:', error)
+      setProjectFiles({ 'error.txt': 'Netzwerkfehler beim Laden der Dateien.' })
+    }
+  }
+
   const loadCourseFiles = async () => {
     if (!config) return
 
@@ -171,9 +204,22 @@ function App() {
     }
   }
 
-  const openProject = (projectId) => {
-    setCurrentProject(projectId)
+  const openProject = (project) => {
+    console.log('Öffne Projekt:', project)
+    
+    // State für neues Projekt zurücksetzen
+    setCurrentProject(project)
+    setProjectFiles({})  // Alte Dateien löschen
+    setCurrentFile('')   // Aktuelle Datei zurücksetzen
+    setChatMessages([])  // Chat-Verlauf löschen
+    setWebcontainerOutput([]) // Console löschen
+    
+    // Projektdateien vom Server laden
+    fetchProjectFiles(project.id)
+    
+    // Zur IDE wechseln
     setCurrentView('ide')
+    
     // WebContainer beim Öffnen der IDE vorbereiten
     setIsWebcontainerActive(true)
   }
@@ -221,7 +267,7 @@ function App() {
           cmid: config.cmid,
           sesskey: config.sesskey,
           prompt: currentPrompt,
-          project_id: currentProject
+          project_id: currentProject?.id || 0
         })
       })
 
@@ -235,7 +281,18 @@ function App() {
           timestamp: new Date()
         }
 
+        console.log('AI Message:', aiMessage)
+
         setChatMessages(prev => [...prev, aiMessage])
+        
+        // WICHTIG: Neue/geänderte Dateien sofort in projectFiles aktualisieren
+        if (result.files && Object.keys(result.files).length > 0) {
+          console.log('Aktualisiere Projektdateien mit AI-generierten Files:', result.files)
+          setProjectFiles(result.files)
+          
+          // Automatisch zum Preview-Tab wechseln um die Änderungen zu sehen
+          setActiveTab('preview')
+        }
         
         // WebContainer starten
         startWebContainer()
@@ -537,7 +594,7 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                       <div className="card-footer">
                         <button 
                           className="btn btn-sm btn-outline-primary"
-                          onClick={() => openProject(project.id)}
+                          onClick={() => openProject(project)}
                         >
                           Code Editor
                         </button>
@@ -762,7 +819,9 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                   {activeTab === 'preview' && (
                     <div className="tab-pane fade show active h-100">
                       <WebContainerComponent 
+                        key={currentProject?.id} // Re-mount bei Projektwechsel
                         isActive={isWebcontainerActive}
+                        projectFiles={projectFiles} // Echte Projektdateien übergeben
                         onOutput={handleWebcontainerOutput}
                         onFilesUpdate={handleProjectFilesUpdate}
                       />

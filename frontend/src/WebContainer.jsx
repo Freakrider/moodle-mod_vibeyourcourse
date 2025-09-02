@@ -2,13 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 
 // WebContainer wird dynamisch geladen um optional zu bleiben
 let WebContainer = null
+// Globale WebContainer-Instanz (Singleton)
+let globalWebContainerInstance = null
+let globalWebContainerPromise = null
 
-function WebContainerComponent({ isActive, onOutput, onFilesUpdate }) {
+function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate }) {
   const iframeRef = useRef(null)
   const [webcontainer, setWebcontainer] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isBooted, setIsBooted] = useState(false)
   const [url, setUrl] = useState('')
+  const [iframeLoadingTimeout, setIframeLoadingTimeout] = useState(null)
+  const [iframeLoaded, setIframeLoaded] = useState(false)
 
   useEffect(() => {
     if (isActive && !webcontainer) {
@@ -16,11 +21,49 @@ function WebContainerComponent({ isActive, onOutput, onFilesUpdate }) {
     }
   }, [isActive])
 
+  // Neu laden wenn sich Projektdateien ändern
+  useEffect(() => {
+    if (webcontainer && projectFiles && Object.keys(projectFiles).length > 0) {
+      onOutput?.('🔄 Projektdateien haben sich geändert, lade WebContainer neu...')
+      // WebContainer mit neuen Dateien neu erstellen
+      createProjectWithFiles(webcontainer)
+    }
+  }, [projectFiles])
+
+  // Cleanup-Funktion wenn Komponente unmounted wird
+  useEffect(() => {
+    return () => {
+      // Note: WebContainer-Instanz wird NICHT zerstört, da sie global wiederverwendet wird
+      // Sie wird nur vom lokalen State entfernt
+      setWebcontainer(null)
+      setIsBooted(false)
+    }
+  }, [])
+
   const initWebContainer = async () => {
     setIsLoading(true)
     onOutput?.('🚀 WebContainer wird initialisiert...')
 
     try {
+      // Prüfe, ob bereits eine WebContainer-Instanz existiert
+      if (globalWebContainerInstance) {
+        onOutput?.('♻️ Verwende vorhandene WebContainer-Instanz...')
+        setWebcontainer(globalWebContainerInstance)
+        setIsBooted(true)
+        onOutput?.('✅ WebContainer-Instanz wiederverwendet!')
+        return
+      }
+
+      // Prüfe, ob bereits ein Boot-Prozess läuft
+      if (globalWebContainerPromise) {
+        onOutput?.('⏳ Warte auf laufenden WebContainer-Boot-Prozess...')
+        const instance = await globalWebContainerPromise
+        setWebcontainer(instance)
+        setIsBooted(true)
+        onOutput?.('✅ WebContainer aus laufendem Boot-Prozess erhalten!')
+        return
+      }
+
       // Dynamisch WebContainer API laden
       if (!WebContainer) {
         onOutput?.('📦 Lade WebContainer API...')
@@ -54,19 +97,31 @@ function WebContainerComponent({ isActive, onOutput, onFilesUpdate }) {
       }
 
       // Create WebContainer instance (kann nur einmal aufgerufen werden!)
-      onOutput?.('🎯 Erstelle WebContainer-Instanz...')
-      const instance = await WebContainer.boot()
+      onOutput?.('🎯 Erstelle WebContainer-Instanz (Singleton)...')
+      
+      // Starte Boot-Prozess und speichere Promise
+      globalWebContainerPromise = WebContainer.boot()
+      const instance = await globalWebContainerPromise
+      
+      // Speichere die globale Instanz
+      globalWebContainerInstance = instance
+      globalWebContainerPromise = null  // Reset Promise da jetzt Instanz vorhanden
+      
       setWebcontainer(instance)
       setIsBooted(true)
-      onOutput?.('✅ WebContainer erfolgreich gebootet!')
+      onOutput?.('✅ WebContainer erfolgreich gebootet (Singleton erstellt)!')
       
-      // Create a simple Hello World project
-      await createHelloWorldProject(instance)
+      // Create project mit echten Dateien oder Fallback
+      await createProjectWithFiles(instance)
       
     } catch (error) {
       console.error('Fehler beim Initialisieren von WebContainer:', error)
       onOutput?.(`❌ Fehler: ${error.message}`)
       onOutput?.('🔄 Starte Fallback-Modus...')
+      
+      // Reset globale Variablen bei Fehler
+      globalWebContainerPromise = null
+      globalWebContainerInstance = null
       
       // Fallback wenn WebContainer nicht funktioniert
       await createFallbackPreview()
@@ -76,8 +131,127 @@ function WebContainerComponent({ isActive, onOutput, onFilesUpdate }) {
     }
   }
 
+  const createProjectWithFiles = async (instance) => {
+    // Prüfe, ob echte Projektdateien vorhanden sind
+    if (!projectFiles || Object.keys(projectFiles).length === 0) {
+      onOutput?.('⚠️ Keine Projektdateien vorhanden, verwende Hello World Fallback...')
+      return await createHelloWorldProject(instance)
+    }
+
+    onOutput?.('📁 Lade echte Projektdateien in WebContainer...')
+    onOutput?.(`📊 ${Object.keys(projectFiles).length} Dateien gefunden`)
+
+    // Transformiere Projektdateien für WebContainer
+    const files = {}
+    for (const [filename, content] of Object.entries(projectFiles)) {
+      files[filename] = {
+        file: {
+          contents: typeof content === 'string' ? content : JSON.stringify(content, null, 2)
+        }
+      }
+    }
+
+    // Füge package.json hinzu wenn nicht vorhanden
+    if (!files['package.json']) {
+      files['package.json'] = {
+        file: {
+          contents: JSON.stringify({
+            name: 'ai-generated-project',
+            version: '1.0.0',
+            description: 'KI-generiertes Projekt von Vibe Your Course',
+            main: files['index.js'] ? 'index.js' : 'server.js',
+            scripts: {
+              start: files['server.js'] ? 'node server.js' : 'node index.js',
+              dev: files['server.js'] ? 'node server.js' : 'node index.js'
+            },
+            dependencies: {}
+          }, null, 2)
+        }
+      }
+    }
+
+    try {
+      // Mount the file system nach WebContainer API
+      await instance.mount(files)
+      onOutput?.('📁 Echte Projektdateien erfolgreich geladen!')
+      
+      // Sende die Dateien an den Code-Betrachter
+      if (onFilesUpdate) {
+        onFilesUpdate(projectFiles)
+      }
+
+      // Starte Server wenn möglich
+      await startProjectServer(instance)
+
+    } catch (error) {
+      console.error('Fehler beim Laden der Projektdateien:', error)
+      onOutput?.(`❌ Fehler beim Laden der Projektdateien: ${error.message}`)
+      onOutput?.('🔄 Fallback zu Hello World...')
+      return await createHelloWorldProject(instance)
+    }
+  }
+
+  const startProjectServer = async (instance) => {
+    onOutput?.('🚀 Starte Projekt-Server...')
+
+    try {
+      // Warte auf Server-ready Event und hole die URL
+      instance.on('server-ready', (port, url) => {
+        onOutput?.(`🔗 Server bereit auf Port ${port}`)
+        onOutput?.(`🔗 App verfügbar unter: ${url}`)
+        onOutput?.(`🔍 URL-Typ: ${typeof url}, Length: ${url?.length}`)
+        setUrl(url)
+      })
+
+      // Versuche npm start oder fallback zu direkt node
+      let serverProcess
+      try {
+        serverProcess = await instance.spawn('npm', ['run', 'start'])
+        onOutput?.('📦 Server über npm start gestartet')
+      } catch (npmError) {
+        onOutput?.('⚠️ npm start fehlgeschlagen, versuche direkten Node.js Start...')
+        
+        // Fallback: Finde eine .js Datei und starte sie direkt
+        const jsFiles = Object.keys(projectFiles).filter(f => f.endsWith('.js'))
+        if (jsFiles.length > 0) {
+          const mainFile = jsFiles.find(f => f.includes('server') || f.includes('index')) || jsFiles[0]
+          serverProcess = await instance.spawn('node', [mainFile])
+          onOutput?.(`🔧 Server direkt mit node ${mainFile} gestartet`)
+        } else {
+          throw new Error('Keine ausführbare JavaScript-Datei gefunden')
+        }
+      }
+
+      // Log Server-Output
+      serverProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            onOutput?.(`[Server] ${data}`)
+          }
+        })
+      )
+
+      // Fallback: Versuche URL nach kurzer Verzögerung zu holen falls server-ready Event nicht funktioniert
+      setTimeout(async () => {
+        try {
+          const currentUrl = await instance.url
+          if (currentUrl) {
+            onOutput?.(`🔗 Fallback URL erhalten: ${currentUrl}`)
+            setUrl(currentUrl)
+          }
+        } catch (error) {
+          onOutput?.('⚠️ Fallback URL noch nicht verfügbar, Server startet noch...')
+        }
+      }, 2000)
+
+    } catch (error) {
+      onOutput?.(`❌ Server-Start fehlgeschlagen: ${error.message}`)
+      onOutput?.('🔄 Verwende statische Datei-Anzeige als Fallback')
+    }
+  }
+
   const createHelloWorldProject = async (instance) => {
-    onOutput?.('📁 Erstelle Hello World Projekt...')
+    onOutput?.('📁 Erstelle Hello World Fallback-Projekt...')
 
     // Define the project files nach WebContainer API-Spezifikation
     const files = {
@@ -255,12 +429,6 @@ require('./server.js');`
         onFilesUpdate(files)
       }
 
-      // Server-ready Event listener registrieren BEVOR wir den Server starten
-      instance.on('server-ready', (port, url) => {
-        setUrl(url)
-        onOutput?.(`🔗 App verfügbar unter: ${url}`)
-      })
-
       // Starte den Node.js HTTP Server
       const serverProcess = await instance.spawn('npm', ['run', 'dev'])
       onOutput?.('🌐 Node.js Server wird gestartet...')
@@ -274,19 +442,26 @@ require('./server.js');`
         })
       )
 
-      // Warten auf Server-Start
+      // Warte auf Server-ready Event und hole die URL
+      instance.on('server-ready', (port, url) => {
+        onOutput?.(`🔗 Server bereit auf Port ${port}`)
+        onOutput?.(`🔗 App verfügbar unter: ${url}`)
+        onOutput?.(`🔍 URL-Typ: ${typeof url}, Length: ${url?.length}`)
+        setUrl(url)
+      })
+
+      // Fallback: Versuche URL nach kurzer Verzögerung zu holen falls server-ready Event nicht funktioniert
       setTimeout(async () => {
         try {
-          // WebContainer stellt automatisch eine URL bereit
-          const url = await instance.url
-          if (url) {
-            setUrl(url)
-            onOutput?.(`🔗 App verfügbar unter: ${url}`)
+          const currentUrl = await instance.url
+          if (currentUrl) {
+            onOutput?.(`🔗 Fallback URL erhalten: ${currentUrl}`)
+            setUrl(currentUrl)
           }
         } catch (error) {
-          onOutput?.('⚠️ URL noch nicht verfügbar, Server startet noch...')
+          onOutput?.('⚠️ Fallback URL noch nicht verfügbar, Server startet noch...')
         }
-      }, 3000)
+      }, 2000)
 
     } catch (error) {
       console.error('Fehler beim Erstellen des Projekts:', error)
@@ -464,6 +639,12 @@ require('./server.js');`
               borderRadius: '4px'
             }}
             title="WebContainer App Preview"
+            onLoad={() => {
+              onOutput?.('📋 iframe erfolgreich geladen!')
+            }}
+            onError={(e) => {
+              onOutput?.(`❌ iframe Fehler: ${e.message || 'Unbekannter Fehler'}`)
+            }}
           />
         </div>
       ) : (

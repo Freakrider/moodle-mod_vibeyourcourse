@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'mod_vibeyourcourse';
 $plugin->release = 'v1.2.0'; // Lean database structure - removed unnecessary fields
-$plugin->version = 2025090201.13;
+$plugin->version = 2025090201.15;
 $plugin->requires = 2024041600; 
 $plugin->maturity = MATURITY_ALPHA;
 $plugin->dependencies = [];

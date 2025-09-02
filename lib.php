@@ -419,7 +419,7 @@ function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
     error_log("Claude API: API key found, length: " . strlen($api_key));
 
     $api_url = 'https://api.anthropic.com/v1/messages';
-    $anthropic_version = '2024-10-22';
+    $anthropic_version = '2023-06-01';
     $model = 'claude-sonnet-4-20250514';
 
     $system_prompt = "You are 'Vibe Coder', an expert AI assistant within a Moodle course. Your goal is to function as a 'pair programmer' by generating and modifying complete, runnable web applications based on user prompts.
@@ -429,6 +429,8 @@ function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
     - The JSON object must contain two keys: 'response' (a user-friendly, markdown-formatted explanation of your changes) and 'files' (an object of filenames and their complete string content).
     - When modifying a project, always return the COMPLETE, updated content for every changed file. Do not use diffs.
     - Generate simple, clean, single-page 'micro-apps'. Prioritize clarity and functionality for a learning environment.
+    - KEEP FILES CONCISE: Use minimal CSS/HTML, avoid unnecessary comments or whitespace to stay within token limits.
+    - OPTIMIZE FOR SIZE: Inline CSS when possible, use short variable names, avoid repetition.
     - If the user asks a question not related to coding, gently guide them back to the task in the 'response' field and provide an empty 'files' object.";
     
     $user_message_content = "User Prompt: \"{$prompt}\"";
@@ -438,7 +440,7 @@ function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
 
     $post_data = json_encode([
         'model' => $model,
-        'max_tokens' => 4096,
+        'max_tokens' => 6400, // Erhöht für vollständige HTML/CSS/JS Dateien
         'system' => $system_prompt,
         'messages' => [
             ['role' => 'user', 'content' => $user_message_content]
@@ -533,6 +535,10 @@ function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
     
     error_log("Claude API: Decoded response structure: " . print_r($response_data, true));
     
+    // Debug: Vergleiche Original-Response-Größe mit extrahierter Text-Größe
+    $original_size = strlen($result);
+    error_log("Claude API: Original response size: " . $original_size . " bytes");
+    
     // Prüfe die Response-Struktur schrittweise
     if (!isset($response_data->content)) {
         error_log("Claude API: Missing 'content' field in response");
@@ -556,15 +562,76 @@ function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
         throw new moodle_exception('AI response missing expected text field.', 'mod_vibeyourcourse');
     }
     
-    $json_string = $response_data->content[0]->text;
-    error_log("Claude API: Content text from API: " . substr($json_string, 0, 500) . (strlen($json_string) > 500 ? "... (truncated)" : ""));
+    // Sichere Extraktion des Text-Inhalts mit expliziter String-Konvertierung
+    // Verwende json_encode/decode Zyklus zur Sicherstellung korrekter String-Behandlung
+    $content_object = $response_data->content[0];
+    error_log("Claude API: content[0] object type: " . gettype($content_object));
+    error_log("Claude API: content[0] text type: " . gettype($content_object->text));
+    
+    // Direkte Zuweisung mit expliziter String-Konvertierung
+    $json_string = (string) $content_object->text;
+    
+    // Alternative: Falls das nicht funktioniert, versuche über json_encode/decode
+    if (strlen($json_string) === 0 || empty($json_string)) {
+        error_log("Claude API: Direct assignment failed, trying json_encode/decode method");
+        $content_array = json_decode(json_encode($response_data->content[0]), true);
+        $json_string = $content_array['text'] ?? '';
+    }
+    
+    // Debug-Information über die extrahierte String-Länge
+    error_log("Claude API: Content text length: " . strlen($json_string));
+    error_log("Claude API: Content text preview (first 500 chars): " . substr($json_string, 0, 500));
+    error_log("Claude API: Content text ending (last 100 chars): " . substr($json_string, -100));
+    
+    // Zusätzliche Sicherheitsprüfung für leeren String
+    if (empty($json_string) || strlen($json_string) === 0) {
+        error_log("Claude API: Extracted json_string is empty!");
+        throw new moodle_exception('AI response text content is empty after extraction.', 'mod_vibeyourcourse');
+    }
+    
+    // WICHTIG: Claude API liefert JSON oft in Markdown-Codeblöcken!
+    // Entferne ```json am Anfang und ``` am Ende
+    $json_string = trim($json_string);
+    
+    if (str_starts_with($json_string, '```json')) {
+        error_log("Claude API: Removing markdown code block wrapper");
+        // Entferne ```json am Anfang (und optional \n)
+        $json_string = preg_replace('/^```json\s*\n?/', '', $json_string);
+        // Entferne ``` am Ende
+        $json_string = preg_replace('/\n?```\s*$/', '', $json_string);
+        $json_string = trim($json_string);
+        error_log("Claude API: After markdown removal - Length: " . strlen($json_string));
+        error_log("Claude API: After markdown removal - First 100 chars: " . substr($json_string, 0, 100));
+        error_log("Claude API: After markdown removal - Last 100 chars: " . substr($json_string, -100));
+    }
+    
+    // Prüfe auf abgeschnittene JSON-Response
+    if (!str_ends_with($json_string, '}')) {
+        error_log("Claude API: Response scheint abgeschnitten zu sein (endet nicht mit '}')");
+        error_log("Claude API: Actual string length: " . strlen($json_string));
+        error_log("Claude API: Last 200 chars: " . substr($json_string, -200));
+        
+        // Versuche trotzdem zu parsen, falls es ein anderes Format ist
+        error_log("Claude API: Attempting to parse truncated response anyway...");
+    }
     
     $claude_response = json_decode($json_string);
-    echo html_writer::tag('pre', s(print_r($claude_response, true)));
 
     if (json_last_error() !== JSON_ERROR_NONE) {
         error_log("Claude API: Error parsing Claude's JSON response: " . json_last_error_msg());
         error_log("Claude API: Full Claude response text: " . $json_string);
+        
+        // Zusätzliche Diagnose für häufige Probleme
+        if (json_last_error() === JSON_ERROR_SYNTAX) {
+            $lines = explode("\n", $json_string);
+            error_log("Claude API: Response hat " . count($lines) . " Zeilen, Länge: " . strlen($json_string) . " Zeichen");
+            
+            // Prüfe auf unvollständige JSON-Struktur
+            if (!str_contains($json_string, '"files"') || !str_contains($json_string, '"response"')) {
+                throw new moodle_exception('AI response ist unvollständig. Max-Token-Limit möglicherweise erreicht.', 'mod_vibeyourcourse');
+            }
+        }
+        
         throw new moodle_exception('AI returned invalid JSON format: ' . json_last_error_msg(), 'mod_vibeyourcourse');
     }
     
