@@ -49,10 +49,53 @@ Studierende lernen am besten, indem sie schaffen. Sie bauen einen Finanzrechner,
 
 - **Phase 1**: Fundament des Moodle-Plugins mit Datenbank und Konfiguration. *(Abgeschlossen)*
 
-- **Phase 2**: Implementierung der interaktiven IDE mit Code-Editor und KI-Grundfunktionen.
+- **Phase 2**: React SPA Frontend und interaktive UI. *(Abgeschlossen)*
 
-- **Phase 3**: Integration der Browser-Runtimes (Pyodide, WebContainer) und der Sharing-Funktionen (Projekt-Galerie).
+- **Phase 3**: Code-Editor Integration und API-Endpunkte. *(In Arbeit)*
 
-- **Phase 4**: Ausbau von Lernanalytik und Gamification.
+- **Phase 4**: Integration der Browser-Runtimes (Pyodide, WebContainer) und der Sharing-Funktionen (Projekt-Galerie).
 
-- **Phase 5**: Optimierung und Stabilisierung für den produktiven Einsatz.
+- **Phase 5**: Ausbau von Lernanalytik und Gamification.
+
+- **Phase 6**: Optimierung und Stabilisierung für den produktiven Einsatz.
+
+---
+
+## 🛠️ Entwicklung & Build
+
+### React Frontend Setup
+Das Plugin nutzt ein modernes React Frontend mit Vite als Build-Tool:
+
+```bash
+# In das Frontend-Verzeichnis wechseln
+cd frontend/
+
+# Dependencies installieren
+npm install
+
+# Development Server für Frontend-Entwicklung
+npm run dev
+
+# Production Build erstellen
+npm run build
+```
+
+### Projektstruktur
+```
+mod/vibeyourcourse/
+├── frontend/           # React Development Environment
+│   ├── src/
+│   │   ├── App.jsx    # Haupt React-Komponente
+│   │   ├── App.css    # Alle UI-Styles
+│   │   └── main.jsx   # React Entry Point
+│   ├── vite.config.js # Build-Konfiguration
+│   └── package.json
+├── build/             # Compiled React App
+│   ├── bundle.js     # Single JavaScript Bundle
+│   ├── bundle.css    # Single CSS Bundle
+│   └── index.html
+└── view.php          # PHP-Datei lädt React SPA
+```
+
+### Moodle Integration
+Die `view.php` erstellt ein `<div id="vibeyourcourse-react-app"></div>` Container und lädt die kompilierten React-Bundles. Alle Moodle-spezifischen Daten (User-ID, Kurs-Context, etc.) werden über `window.vibeyourcourseConfig` an die React-App übergeben.
