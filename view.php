@@ -100,8 +100,16 @@ if (!$allowed_runtimes) {
     
     <!-- Header Section -->
     <div class="vibeyourcourse-header">
-        <div class="row">
-            <div class="col-md-6">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <div class="vibeyourcourse-brand">
+                    <?php
+                    $logourl = new moodle_url('/mod/vibeyourcourse/pix/monologo.png');
+                    echo html_writer::img($logourl, 'VibeCoding Logo', array('class' => 'vibeyourcourse-logo'));
+                    ?>
+                </div>
+            </div>
+            <div class="col-md-4">
                 <h3><?php echo get_string('myprojects', 'mod_vibeyourcourse'); ?></h3>
             </div>
             <div class="col-md-6 text-right">
@@ -166,7 +174,15 @@ if (!$allowed_runtimes) {
     <div id="ide-container" class="vibeyourcourse-ide d-none">
         <div class="ide-header">
             <div class="row align-items-center">
-                <div class="col-md-6">
+                <div class="col-md-2">
+                    <div class="vibeyourcourse-brand">
+                        <?php
+                        $logourl = new moodle_url('/mod/vibeyourcourse/pix/monologo.png');
+                        echo html_writer::img($logourl, 'VibeCoding Logo', array('class' => 'vibeyourcourse-logo vibeyourcourse-logo-small'));
+                        ?>
+                    </div>
+                </div>
+                <div class="col-md-4">
                     <h4 id="current-project-name">Project Name</h4>
                 </div>
                 <div class="col-md-6 text-right">
@@ -420,6 +436,25 @@ document.addEventListener('DOMContentLoaded', function() {
 <style>
 .vibeyourcourse-container {
     margin-top: 20px;
+}
+
+.vibeyourcourse-brand {
+    display: flex;
+    align-items: center;
+}
+
+.vibeyourcourse-logo {
+    max-height: 40px;
+    width: auto;
+    transition: transform 0.2s ease;
+}
+
+.vibeyourcourse-logo:hover {
+    transform: scale(1.05);
+}
+
+.vibeyourcourse-logo-small {
+    max-height: 32px;
 }
 
 .project-card {

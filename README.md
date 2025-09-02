@@ -1,46 +1,58 @@
-# Moodle Module: Vibe Your Course
+# Moodle-Modul: Vibe Your Course
+## Vom Lernstoff zur eigenen Micro App
 
-## Projektbeschreibung
+### 🔥 Die Vision: Aktives Schaffen statt passives Lernen
 
-**Vibe Your Course** ist ein innovatives Moodle-Plugin (`mod_vibe`), das eine KI-gestützte, personalisierte Lernumgebung schafft. Das System kombiniert moderne Web-Technologien mit intelligenter Content-Generierung, um ein immersives und adaptives Lernerlebnis zu bieten.
+Vibe Your Course revolutioniert das Lernen in Moodle. Statt Studierende nur mit Lernmaterial zu versorgen, geben wir ihnen ein Werkzeug an die Hand, mit dem sie ihr Wissen direkt anwenden und kreativ werden können. Das Ziel ist nicht das Coden selbst, sondern die Entwicklung eigener, lauffähiger "Micro Apps", die auf den Kursinhalten basieren.
 
-### Kernfunktionen
+Studierende lernen am besten, indem sie schaffen. Sie bauen einen Finanzrechner, nachdem sie die Zinsrechnung gelernt haben. Sie entwickeln ein interaktives Daten-Dashboard, nachdem sie statistische Grundlagen verstanden haben. So wird Wissen lebendig, greifbar und nachhaltig.
 
-#### 🤖 KI-gestütztes Content Management
-- **Intelligente Prompt-Verarbeitung**: Dynamische Generierung von Lerninhalten basierend auf Benutzer-Prompts
-- **Adaptive Inhaltsanpassung**: Personalisierung der Lerninhalte je nach Lernfortschritt und -stil
-- **Multi-Modal Content**: Unterstützung für Text, Bilder, Videos und interaktive Elemente
+---
 
-#### 🎨 Moderne Frontend-Architektur
-- **LTI-Renderer SPA**: Single Page Application als LTI-Tool für nahtlose Moodle-Integration
-- **Responsive Design**: Optimiert für Desktop, Tablet und Mobile
-- **Real-time Updates**: Live-Aktualisierung von Inhalten ohne Seitenneuladen
+## 🚀 Kernfunktionen
 
-#### 🛠 Technische Features
-- **Clientseitiges Setup**: Einfache Installation und Konfiguration
-- **JSON-basierte Prompt-Blueprints**: Strukturierte Vorlagen für Content-Generierung
-- **Flexible Plugin-Architektur**: Erweiterbar durch Module und Add-ons
-- **Datenbankintegration**: Effiziente Speicherung von Benutzer-Daten und generierten Inhalten
+### Von der Idee zur lauffähigen App im Browser
 
-### Architektur-Überblick
+- **Echte Anwendungsentwicklung**: Studierende arbeiten nicht mit Code-Schnipseln, sondern bauen vollständige Kleinanwendungen. Dank Pyodide (Python) und WebContainern (HTML/JS/Node.js) laufen diese Apps direkt im Browser – ohne komplexe Installationen.
 
-```
-┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
-│   Moodle Core       │    │   mod_vibe Plugin   │    │   LTI-Renderer SPA │
-│                     │◄──►│                     │◄──►│                     │
-│ • Benutzerauthentifiz│    │ • Plugin Logic      │    │ • React/Vue Frontend│
-│ • Kursverwaltung    │    │ • DB Management     │    │ • KI-Integration    │
-│ • Grade Management  │    │ • LTI Provider      │    │ • Content Rendering │
-└─────────────────────┘    └─────────────────────┘    └─────────────────────┘
-```
+- **Lernmaterial als Startpunkt**: Lehrende definieren Projektvorlagen, die direkt an die Kursinhalte anknüpfen und den Studierenden den perfekten Einstieg in ihre eigene App-Entwicklung geben.
 
-### Zielgruppe
-- **Lehrende**: Einfache Erstellung von personalisierten Kursinhalten
-- **Lernende**: Immersive und adaptive Lernerfahrung
-- **Administratoren**: Umfassende Kontrolle und Konfigurationsmöglichkeiten
+- **KI als kreativer Partner**: Der integrierte KI-Assistent hilft nicht nur bei Fehlern, sondern agiert als Sparringspartner, der hilft, Ideen zu konkretisieren und aus einem einfachen Konzept ("Eine App zur Visualisierung von Wahlergebnissen") eine strukturierte Projektbasis zu schaffen.
 
-### Roadmap
-1. **Phase 1**: Grundlegendes Plugin-Setup und DB-Schema
-2. **Phase 2**: LTI-Integration und Frontend-SPA
-3. **Phase 3**: KI-Integration und Prompt-System
-4. **Phase 4**: Advanced Features und Performance-Optimierung
+### 👥 Teilen, Entdecken und Kollaborieren
+
+- **Projekt-Galerie**: Fertige Micro Apps können in einer kursweiten Galerie ausgestellt werden. Das schafft Anerkennung und motiviert.
+
+- **Voneinander lernen**: Studierende können die Projekte ihrer Kommilitonen ansehen, ausprobieren und deren Code studieren. So entsteht ein organischer Wissensaustausch.
+
+- **Peer-Feedback**: Geplante Features ermöglichen es, Feedback zu den Apps zu geben und gemeinsam an Lösungen zu arbeiten.
+
+---
+
+## 🔧 Moodle-Integration
+
+- **Nahtlos und nativ**: "Vibe Your Course" ist eine normale Moodle-Aktivität und nutzt die bestehende Nutzer-, Kurs- und Bewertungsstruktur.
+
+- **Didaktische Steuerung**: Lehrende behalten die volle Kontrolle über die Rahmenbedingungen, wie verfügbare Technologien (Python, Web), den Grad der KI-Unterstützung und Bewertungskriterien.
+
+---
+
+## 🎯 Zielgruppe
+
+**Lehrende**: Wollen einen anwendungsorientierten Unterricht gestalten, der über die reine Wissensvermittlung hinausgeht und Kreativität fördert.
+
+**Lernende**: Suchen nach einer motivierenden Möglichkeit, Gelerntes praktisch anzuwenden und sichtbare Ergebnisse zu schaffen, die sie teilen können.
+
+---
+
+## 🗺️ Roadmap
+
+- **Phase 1**: Fundament des Moodle-Plugins mit Datenbank und Konfiguration. *(Abgeschlossen)*
+
+- **Phase 2**: Implementierung der interaktiven IDE mit Code-Editor und KI-Grundfunktionen.
+
+- **Phase 3**: Integration der Browser-Runtimes (Pyodide, WebContainer) und der Sharing-Funktionen (Projekt-Galerie).
+
+- **Phase 4**: Ausbau von Lernanalytik und Gamification.
+
+- **Phase 5**: Optimierung und Stabilisierung für den produktiven Einsatz.
