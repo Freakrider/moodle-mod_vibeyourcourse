@@ -120,28 +120,13 @@
     </TABLE>
 
     <!-- AI interactions table -->
-    <TABLE NAME="vibeyourcourse_ai_interactions" COMMENT="Tracking of AI interactions for analytics">
+    <TABLE NAME="vibeyourcourse_ai_interactions" COMMENT="Simple tracking of AI interactions">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="project_id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Reference to project"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="User who interacted with AI"/>
-        
-        <!-- Interaction details -->
-        <FIELD NAME="interaction_type" TYPE="char" LENGTH="30" NOTNULL="true" SEQUENCE="false" COMMENT="Type of interaction (hint, generation, debug, review)"/>
         <FIELD NAME="user_prompt" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="User's prompt or question"/>
         <FIELD NAME="ai_response" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="AI's response"/>
-        <FIELD NAME="context_code" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Code context at time of interaction"/>
-        
-        <!-- AI provider details -->
-        <FIELD NAME="ai_provider" TYPE="char" LENGTH="50" NOTNULL="true" SEQUENCE="false" COMMENT="AI provider used"/>
-        <FIELD NAME="ai_model" TYPE="char" LENGTH="50" NOTNULL="false" SEQUENCE="false" COMMENT="Specific AI model used"/>
-        <FIELD NAME="tokens_used" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Tokens consumed"/>
-        
-        <!-- Quality metrics -->
-        <FIELD NAME="user_rating" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false" COMMENT="User rating of AI response (1-5)"/>
-        <FIELD NAME="was_helpful" TYPE="int" LENGTH="2" NOTNULL="false" SEQUENCE="false" COMMENT="Whether user found response helpful"/>
-        
-        <!-- Timestamp -->
         <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false"/>
       </FIELDS>
       <KEYS>
@@ -150,9 +135,8 @@
         <KEY NAME="user_fk" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id"/>
       </KEYS>
       <INDEXES>
-        <INDEX NAME="project_type" UNIQUE="false" FIELDS="project_id,interaction_type"/>
+        <INDEX NAME="project_time" UNIQUE="false" FIELDS="project_id,timecreated"/>
         <INDEX NAME="user_time" UNIQUE="false" FIELDS="userid,timecreated"/>
-        <INDEX NAME="provider" UNIQUE="false" FIELDS="ai_provider"/>
       </INDEXES>
     </TABLE>
 

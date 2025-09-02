@@ -388,9 +388,6 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
         }
 
         $claude_response = vibeyourcourse_call_claude_api($prompt, $project_files);
-        echo html_writer::tag('pre', s(print_r($claude_response, true)));
-
-        var_dump($claude_response); die;
 
         // DEBUGGING: Speichere für später
         $test = " | Claude Response: " . print_r($claude_response, true);
@@ -411,13 +408,10 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
         $DB->update_record('vibeyourcourse_projects', $project);
 
         $interaction_record = new stdClass();
-        $interaction_record->project_id = $project_id;
         $interaction_record->userid = $userid;
-        $interaction_record->interaction_type = 'generation';
+        $interaction_record->project_id = $project_id;
         $interaction_record->user_prompt = $prompt;
         $interaction_record->ai_response = $claude_response->response;
-        $interaction_record->ai_provider = 'anthropic';
-        $interaction_record->ai_model = 'claude-sonnet-4-20250514';
         $interaction_record->timecreated = time();
         
         $interaction_id = $DB->insert_record('vibeyourcourse_ai_interactions', $interaction_record);
