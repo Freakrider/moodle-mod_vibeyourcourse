@@ -396,3 +396,193 @@ function vibeyourcourse_extend_navigation(navigation_node $navref, stdclass $cou
  */
 function vibeyourcourse_extend_settings_navigation(settings_navigation $settingsnav, navigation_node $modulenode = null) {
 }
+
+/**
+ * Sends a prompt to the Claude API and returns the structured response using Moodle's best practices.
+ *
+ * @param string $prompt The user's prompt.
+ * @param array $project_files (Optional) Existing project files for context.
+ * @return stdClass The structured response from Claude.
+ * @throws moodle_exception If the API call fails or returns an invalid format.
+ */
+function vibeyourcourse_call_claude_api($prompt, $project_files = []) {
+    global $CFG;
+
+    error_log("Claude API: Starting API call with prompt: " . substr($prompt, 0, 100));
+
+    $api_key = get_config('mod_vibeyourcourse', 'claude_api_key');
+    if (empty($api_key)) {
+        error_log("Claude API: API key is empty or not configured");
+        throw new moodle_exception('Claude API key is not configured in the plugin settings.', 'mod_vibeyourcourse');
+    }
+    
+    error_log("Claude API: API key found, length: " . strlen($api_key));
+
+    $api_url = 'https://api.anthropic.com/v1/messages';
+    $anthropic_version = '2024-10-22';
+    $model = 'claude-sonnet-4-20250514';
+
+    $system_prompt = "You are 'Vibe Coder', an expert AI assistant within a Moodle course. Your goal is to function as a 'pair programmer' by generating and modifying complete, runnable web applications based on user prompts.
+    
+    KEY INSTRUCTIONS:
+    - Your entire output MUST be a single, valid JSON object. Do not include any text before or after the JSON.
+    - The JSON object must contain two keys: 'response' (a user-friendly, markdown-formatted explanation of your changes) and 'files' (an object of filenames and their complete string content).
+    - When modifying a project, always return the COMPLETE, updated content for every changed file. Do not use diffs.
+    - Generate simple, clean, single-page 'micro-apps'. Prioritize clarity and functionality for a learning environment.
+    - If the user asks a question not related to coding, gently guide them back to the task in the 'response' field and provide an empty 'files' object.";
+    
+    $user_message_content = "User Prompt: \"{$prompt}\"";
+    if (!empty($project_files)) {
+        $user_message_content .= "\n\n--- Current Project Files ---\n" . json_encode($project_files, JSON_PRETTY_PRINT);
+    }
+
+    $post_data = json_encode([
+        'model' => $model,
+        'max_tokens' => 4096,
+        'system' => $system_prompt,
+        'messages' => [
+            ['role' => 'user', 'content' => $user_message_content]
+        ]
+    ]);
+
+    $options = [
+        'method'  => 'POST',
+        'headers' => [
+            'Content-Type'        => 'application/json',
+            'x-api-key'           => $api_key,
+            'anthropic-version'   => $anthropic_version,
+            'User-Agent'          => 'Moodle/' . $CFG->version . ' (mod_vibeyourcourse)'
+        ],
+        'post_data' => $post_data,
+        'timeout'   => 120
+    ];
+
+    error_log("Claude API: Making request to " . $api_url);
+    error_log("Claude API: Request payload size: " . strlen($post_data) . " bytes");
+    
+    // Versuche erst download_file_content, falls das fehlschlägt verwende direktes cURL
+    $result = download_file_content($api_url, $options);
+    
+    if ($result === false) {
+        error_log("Claude API: download_file_content failed, trying direct cURL...");
+        
+        // Fallback auf direktes cURL
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $api_url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $post_data,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'x-api-key: ' . $api_key,
+                'anthropic-version: ' . $anthropic_version,
+                'User-Agent: Moodle/' . $CFG->version . ' (mod_vibeyourcourse)'
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 120,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2
+        ]);
+        
+        $result = curl_exec($ch);
+        
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        $curl_errno = curl_errno($ch);
+        curl_close($ch);
+        
+        error_log("Claude API: Direct cURL HTTP Code: " . $http_code);
+        if ($curl_errno) {
+            error_log("Claude API: cURL Error (" . $curl_errno . "): " . $curl_error);
+        }
+        
+        if ($result === false || $http_code >= 400) {
+            error_log("Claude API: Direct cURL also failed");
+        }
+    }
+    
+    error_log("Claude API: Response received, size: " . (is_string($result) ? strlen($result) : 'false') . " bytes");
+
+    if ($result === false) {
+        // Mehr Details über den cURL-Fehler loggen
+        $curl_error = "cURL request failed";
+        if (function_exists('curl_error') && function_exists('curl_errno')) {
+            // Diese Informationen sind nur verfügbar wenn wir direkten cURL-Zugang haben
+            error_log("Claude API: cURL error details not available through download_file_content");
+        }
+        error_log("Claude API: Request failed, API URL: " . $api_url);
+        error_log("Claude API: Headers sent: " . print_r($options['headers'], true));
+        throw new moodle_exception('API request failed. Check Moodle logs for cURL errors.', 'mod_vibeyourcourse');
+    }
+
+    error_log("Claude API: Raw response: " . substr($result, 0, 1000) . (strlen($result) > 1000 ? "... (truncated)" : ""));
+    error_log("Claude API: FULL Raw response (for debugging): " . $result);
+    
+    $response_data = json_decode($result);
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Claude API: JSON decode error: " . json_last_error_msg());
+        error_log("Claude API: Full raw response: " . $result);
+        throw new moodle_exception('AI returned an unreadable response format. JSON Error: ' . json_last_error_msg(), 'mod_vibeyourcourse');
+    }
+    
+    if (empty($response_data)) {
+        error_log("Claude API: Response data is empty after JSON decode");
+        throw new moodle_exception('AI returned empty response data.', 'mod_vibeyourcourse');
+    }
+    
+    error_log("Claude API: Decoded response structure: " . print_r($response_data, true));
+    
+    // Prüfe die Response-Struktur schrittweise
+    if (!isset($response_data->content)) {
+        error_log("Claude API: Missing 'content' field in response");
+        throw new moodle_exception('AI response missing content field.', 'mod_vibeyourcourse');
+    }
+    
+    if (!is_array($response_data->content) && !is_object($response_data->content)) {
+        error_log("Claude API: 'content' field is not array/object, type: " . gettype($response_data->content));
+        throw new moodle_exception('AI response content field has wrong type.', 'mod_vibeyourcourse');
+    }
+    
+    if (empty($response_data->content[0])) {
+        error_log("Claude API: Missing content[0] in response");
+        error_log("Claude API: Content structure: " . print_r($response_data->content, true));
+        throw new moodle_exception('AI response missing content[0].', 'mod_vibeyourcourse');
+    }
+    
+    if (empty($response_data->content[0]->text)) {
+        error_log("Claude API: Missing content[0]->text in response structure");
+        error_log("Claude API: content[0] structure: " . print_r($response_data->content[0], true));
+        throw new moodle_exception('AI response missing expected text field.', 'mod_vibeyourcourse');
+    }
+    
+    $json_string = $response_data->content[0]->text;
+    error_log("Claude API: Content text from API: " . substr($json_string, 0, 500) . (strlen($json_string) > 500 ? "... (truncated)" : ""));
+    
+    $claude_response = json_decode($json_string);
+    echo html_writer::tag('pre', s(print_r($claude_response, true)));
+
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Claude API: Error parsing Claude's JSON response: " . json_last_error_msg());
+        error_log("Claude API: Full Claude response text: " . $json_string);
+        throw new moodle_exception('AI returned invalid JSON format: ' . json_last_error_msg(), 'mod_vibeyourcourse');
+    }
+    
+    if (!isset($claude_response->response)) {
+        error_log("Claude API: Missing 'response' field in Claude's JSON");
+        error_log("Claude API: Claude response structure: " . print_r($claude_response, true));
+        throw new moodle_exception('AI response missing required "response" field.', 'mod_vibeyourcourse');
+    }
+    
+    if (!isset($claude_response->files)) {
+        error_log("Claude API: Missing 'files' field in Claude's JSON");
+        throw new moodle_exception('AI response missing required "files" field.', 'mod_vibeyourcourse');
+    }
+    
+    if (!is_object($claude_response->files)) {
+        error_log("Claude API: 'files' field is not an object, type: " . gettype($claude_response->files));
+        throw new moodle_exception('AI response "files" field must be an object.', 'mod_vibeyourcourse');
+    }
+
+    return $claude_response;
+}

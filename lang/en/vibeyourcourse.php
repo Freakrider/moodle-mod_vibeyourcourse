@@ -198,3 +198,8 @@ $string['vibeyourcourse:manage'] = 'Manage Vibe Your Course activity settings';
 
 // Events
 $string['eventcoursemoduleviewed'] = 'Course module viewed';
+
+// Admin Settings
+$string['plugindesc'] = 'Settings for the Vibe Your Course AI coding module.';
+$string['claudeapikey'] = 'Claude API Key';
+$string['claudeapikey_desc'] = 'Enter your API key from Anthropic to enable Claude AI features.';

@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 // WebContainer wird dynamisch geladen um optional zu bleiben
 let WebContainer = null
 
-function WebContainerComponent({ isActive, onOutput }) {
+function WebContainerComponent({ isActive, onOutput, onFilesUpdate }) {
   const iframeRef = useRef(null)
   const [webcontainer, setWebcontainer] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -249,6 +249,11 @@ require('./server.js');`
       // Mount the file system nach WebContainer API
       await instance.mount(files)
       onOutput?.('📁 Projektdateien erstellt!')
+      
+      // Sende die Dateien an den Code-Betrachter
+      if (onFilesUpdate) {
+        onFilesUpdate(files)
+      }
 
       // Server-ready Event listener registrieren BEVOR wir den Server starten
       instance.on('server-ready', (port, url) => {

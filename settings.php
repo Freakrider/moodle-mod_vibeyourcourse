@@ -12,10 +12,10 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/\>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version and other meta-data are defined here.
+ * Admin settings for the Vibe Your Course plugin.
  *
  * @package     mod_vibeyourcourse
  * @copyright   2025 Alexander Mikasch
@@ -24,9 +24,20 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'mod_vibeyourcourse';
-$plugin->release = 'v1.1.0'; // Updated release version
-$plugin->version = 2025090201.11;
-$plugin->requires = 2024041600; 
-$plugin->maturity = MATURITY_ALPHA;
-$plugin->dependencies = [];
+if ($ADMIN->fulltree) {
+    // --- General settings header ---
+    $settings->add(new admin_setting_heading(
+        'mod_vibeyourcourse/general_settings',
+        get_string('pluginname', 'mod_vibeyourcourse'),
+        get_string('plugindesc', 'mod_vibeyourcourse')
+    ));
+
+    // --- Claude API Key Setting ---
+    $settings->add(new admin_setting_configpasswordunmask(
+        'mod_vibeyourcourse/claude_api_key',
+        get_string('claudeapikey', 'mod_vibeyourcourse'),
+        get_string('claudeapikey_desc', 'mod_vibeyourcourse'),
+        '',
+        PARAM_TEXT
+    ));
+}

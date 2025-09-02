@@ -41,7 +41,7 @@ Moodle Plugin ◄─► KI APIs (App Generation) ◄─► Browser Runtime
 
 [ ] 🤖 KI-Anbindung für App-Generierung - Das Kernstück: KI muss vollständige Projektdateien (JSON) zurückgeben (TODO: Claude-API)
 
-[ ] (Optional) 👁️ Code-Ansicht zur Transparenz - Ein einfacher Betrachter (statt CodeMirror) reicht aus, um den generierten Code anzuzeigen.
+[x] (Optional) 👁️ Code-Ansicht zur Transparenz - Ein einfacher Betrachter (statt CodeMirror) reicht aus, um den generierten Code anzuzeigen.
 
 🎯 Phase 3: App-Ausführung & WebContainer ✅ ABGESCHLOSSEN
 [x] 🌐 WebContainer Integration zur Ausführung der KI-generierten Web-Apps (Browser-API korrekt implementiert!)
@@ -84,6 +84,8 @@ Moodle Plugin ◄─► KI APIs (App Generation) ◄─► Browser Runtime
 ✅ WebContainer-Integration für Hello World-Anzeige implementieren (Abgeschlossen - Automatischer Start bei IDE-Öffnung)
 
 ✅ WebContainer-Output im Frontend sichtbar machen (Abgeschlossen - Console-Tab funktioniert)
+
+✅ Code-Betrachter implementiert (Abgeschlossen - 👁️ Code-Tab mit Syntax-Highlighting und Datei-Explorer)
 
 🎯 Nächste Schritte (Priorität)
 🔥 Claude-API Integration für intelligente App-Generierung (🕕 L)

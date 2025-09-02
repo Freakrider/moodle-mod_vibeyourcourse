@@ -25,6 +25,7 @@
 define('AJAX_SCRIPT', true);
 require(__DIR__ . '/../../config.php');
 require_once(__DIR__ . '/lib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 // Allow CORS for local development
 header('Access-Control-Allow-Origin: *');
@@ -139,6 +140,11 @@ try {
             $prompt = required_param('prompt', PARAM_TEXT);
             $project_id = optional_param('project_id', 0, PARAM_INT);
             echo json_encode(process_user_prompt($prompt, $project_id, $USER->id, $moduleinstance->id));
+            break;
+            
+        case 'get_course_files':
+        case 'getcoursefiles':
+            echo json_encode(get_course_files($course->id));
             break;
             
         default:
@@ -361,60 +367,197 @@ function get_initial_project_files($runtime, $template = '') {
 }
 
 /**
- * Process user prompt for AI interaction
+ * Process user prompt for AI interaction, generate/update files, and save to the project.
  */
 function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) {
     global $DB;
-    
+    $test = "";
     try {
-        // Sanitize and validate prompt
         $prompt = clean_text($prompt);
         if (empty(trim($prompt))) {
-            return [
-                'success' => false,
-                'error' => 'Prompt darf nicht leer sein.'
-            ];
+            return ['success' => false, 'error' => 'Prompt darf nicht leer sein.'];
         }
         
-        // Log the prompt interaction
+        $project_files = [];
+        $project = null;
+        if ($project_id > 0) {
+            $project = $DB->get_record('vibeyourcourse_projects', ['id' => $project_id, 'userid' => $userid]);
+            if ($project) {
+                $project_files = json_decode($project->project_files, true) ?: [];
+            }
+        }
+
+        $claude_response = vibeyourcourse_call_claude_api($prompt, $project_files);
+        echo html_writer::tag('pre', s(print_r($claude_response, true)));
+
+        var_dump($claude_response); die;
+
+        // DEBUGGING: Speichere für später
+        $test = " | Claude Response: " . print_r($claude_response, true);
+        if (!$project) {
+            $project_data = [
+                'name' => 'AI Project: ' . substr($prompt, 0, 40) . '...',
+                'runtime' => 'webcontainer',
+                'template' => ''
+            ];
+            $new_project_result = create_project($vibeyourcourse_id, $userid, $project_data);
+            $project_id = $new_project_result['project_id'];
+            $project = $DB->get_record('vibeyourcourse_projects', ['id' => $project_id]);
+        }
+        
+        $updated_files = array_merge($project_files, (array)$claude_response->files);
+        $project->project_files = json_encode($updated_files);
+        $project->timemodified = time();
+        $DB->update_record('vibeyourcourse_projects', $project);
+
         $interaction_record = new stdClass();
-        $interaction_record->vibeyourcourse_id = $vibeyourcourse_id;
+        $interaction_record->project_id = $project_id;
         $interaction_record->userid = $userid;
-        $interaction_record->project_id = $project_id > 0 ? $project_id : null;
-        $interaction_record->user_prompt = $prompt;  // Korrigiert: war "prompt", muss "user_prompt" sein
-        $interaction_record->ai_response = 'Prompt erhalten. WebContainer wird gestartet...';  // Korrigiert: war "response"
-        $interaction_record->ai_model = 'placeholder'; // TODO: Claude model identifier
-        $interaction_record->token_count = strlen($prompt); // Rough estimate
-        $interaction_record->processing_time = 0; // TODO: Actual processing time
+        $interaction_record->interaction_type = 'generation';
+        $interaction_record->user_prompt = $prompt;
+        $interaction_record->ai_response = $claude_response->response;
+        $interaction_record->ai_provider = 'anthropic';
+        $interaction_record->ai_model = 'claude-sonnet-4-20250514';
         $interaction_record->timecreated = time();
         
         $interaction_id = $DB->insert_record('vibeyourcourse_ai_interactions', $interaction_record);
         
-        // TODO: Hier wird später die Claude-API-Integration stehen
-        // Für jetzt geben wir eine Standard-Antwort zurück
-        $response = "Verstanden! Ich starte die WebContainer-Integration für dein Projekt. " .
-                   "Prompt empfangen: \"" . substr($prompt, 0, 50) . (strlen($prompt) > 50 ? "..." : "") . "\"";
-        
-        // Update the response in the database
-        $interaction_record->id = $interaction_id;
-        $interaction_record->ai_response = $response;  // Korrigiert: war "response"
-        $interaction_record->processing_time = 1; // Dummy value
-        $DB->update_record('vibeyourcourse_ai_interactions', $interaction_record);
-        
         return [
             'success' => true,
-            'response' => $response,
+            'response' => $claude_response->response,
+            'files' => $updated_files,
             'interaction_id' => $interaction_id,
             'webcontainer_ready' => true,
-            'message' => 'Prompt erfolgreich verarbeitet. WebContainer ist bereit.'
+            'message' => 'Project updated successfully by AI.'
         ];
         
     } catch (Exception $e) {
-        error_log("Fehler bei process_user_prompt: " . $e->getMessage());
+        error_log("Error in process_user_prompt: " . $e->getMessage());
+        
+        // Spezifische Fehlermeldungen für häufige Probleme
+        $error_message = $e->getMessage();
+        $debug_details = "";
+        
+        if (strpos($error_message, 'Claude API key is not configured') !== false) {
+            $error_message = 'Claude API-Schlüssel ist nicht in den Plugin-Einstellungen konfiguriert.';
+        } else if (strpos($error_message, 'API request failed') !== false) {
+            $error_message = 'Verbindung zur Claude-API fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung.';
+        } else if (strpos($error_message, 'unreadable response format') !== false) {
+            $error_message = 'Claude-API hat eine ungültige Antwort gesendet. Bitte versuchen Sie es erneut.';
+        } else if (strpos($error_message, 'invalid data structure') !== false) {
+            $error_message = 'Claude-API Antwort hat ein ungültiges Format. Bitte versuchen Sie es erneut.';
+        } else if (strpos($error_message, 'missing content field') !== false) {
+            $error_message =$e->getMessage(). 'Claude-API Response hat unerwartete Struktur (kein content field).';
+            $debug_details = " | Wahrscheinlich API-Fehler oder falscher API-Key";
+        }
+        
         return [
             'success' => false,
-            'error' => 'Fehler beim Verarbeiten des Prompts: ' . $e->getMessage()
+            'error' => $error_message,
+            'debug_info' => 'Detailed error: ' . $e->getMessage() . $debug_details . (isset($test) ? $test : '')
         ];
+    }
+}
+
+/**
+ * Get course files (resources) from the current course
+ */
+function get_course_files($course_id) {
+    global $DB, $CFG;
+    
+    try {
+        // Get all resource modules (files) in this course
+        $sql = "SELECT cm.id as cmid, cm.instance, r.name, r.intro, f.filename, f.filesize, f.mimetype, f.contenthash
+                FROM {course_modules} cm
+                JOIN {modules} m ON m.id = cm.module
+                JOIN {resource} r ON r.id = cm.instance
+                JOIN {files} f ON f.itemid = r.id AND f.component = 'mod_resource' AND f.filearea = 'content'
+                WHERE cm.course = :courseid 
+                AND m.name = 'resource'
+                AND cm.visible = 1
+                AND f.filename != '.'
+                ORDER BY r.name";
+        
+        $resources = $DB->get_records_sql($sql, ['courseid' => $course_id]);
+        
+        $files = [];
+        foreach ($resources as $resource) {
+            // Generate file URL
+            $file_url = $CFG->wwwroot . '/pluginfile.php/' . 
+                       context_module::instance($resource->cmid)->id . 
+                       '/mod_resource/content/0/' . $resource->filename;
+            
+            // Determine file type from mimetype
+            $file_type = get_file_type_from_mimetype($resource->mimetype);
+            
+            // Format file size
+            $file_size = format_file_size($resource->filesize);
+            
+            $files[] = [
+                'name' => $resource->filename,
+                'display_name' => $resource->name,
+                'type' => $file_type,
+                'size' => $file_size,
+                'mimetype' => $resource->mimetype,
+                'url' => $file_url,
+                'intro' => $resource->intro
+            ];
+        }
+        
+        return [
+            'success' => true,
+            'files' => $files
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Error getting course files: " . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => 'Fehler beim Laden der Course Files: ' . $e->getMessage(),
+            'files' => []
+        ];
+    }
+}
+
+/**
+ * Get file type identifier from MIME type
+ */
+function get_file_type_from_mimetype($mimetype) {
+    $type_map = [
+        'application/pdf' => 'pdf',
+        'application/vnd.ms-powerpoint' => 'powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'powerpoint',
+        'application/msword' => 'word',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'word',
+        'application/vnd.ms-excel' => 'excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'excel',
+        'application/zip' => 'archive',
+        'application/x-zip-compressed' => 'archive',
+        'text/plain' => 'text',
+        'image/jpeg' => 'image',
+        'image/png' => 'image',
+        'image/gif' => 'image',
+        'video/mp4' => 'video',
+        'video/avi' => 'video',
+        'audio/mpeg' => 'audio',
+        'audio/wav' => 'audio'
+    ];
+    
+    return isset($type_map[$mimetype]) ? $type_map[$mimetype] : 'file';
+}
+
+/**
+ * Format file size in human readable format
+ */
+function format_file_size($bytes) {
+    if ($bytes >= 1073741824) {
+        return number_format($bytes / 1073741824, 2) . ' GB';
+    } elseif ($bytes >= 1048576) {
+        return number_format($bytes / 1048576, 2) . ' MB';
+    } elseif ($bytes >= 1024) {
+        return number_format($bytes / 1024, 2) . ' KB';
+    } else {
+        return $bytes . ' B';
     }
 }
 
