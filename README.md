@@ -1,23 +1,32 @@
 # Moodle-Modul: Vibe Your Course
-## Vom Lernstoff zur eigenen Micro App
+## KI-gestützte App-Entwicklung für Studierende 🚀
 
-### 🔥 Die Vision: Aktives Schaffen statt passives Lernen
+### 🔥 Die Vision: "Vibe Coding" - Von der Idee zur App durch natürliche Sprache
 
-Vibe Your Course revolutioniert das Lernen in Moodle. Statt Studierende nur mit Lernmaterial zu versorgen, geben wir ihnen ein Werkzeug an die Hand, mit dem sie ihr Wissen direkt anwenden und kreativ werden können. Das Ziel ist nicht das Coden selbst, sondern die Entwicklung eigener, lauffähiger "Micro Apps", die auf den Kursinhalten basieren.
+Vibe Your Course revolutioniert das Lernen durch **KI-gestützte App-Entwicklung**. Studierende beschreiben ihre App-Ideen in natürlicher Sprache, und die KI agiert als ihr persönlicher Entwickler, der lauffähige "Micro Apps" erstellt. Der Fokus liegt auf der **Idee, dem Konzept und dem kreativen Problemlösen** - nicht auf der Programmierung.
 
-Studierende lernen am besten, indem sie schaffen. Sie bauen einen Finanzrechner, nachdem sie die Zinsrechnung gelernt haben. Sie entwickeln ein interaktives Daten-Dashboard, nachdem sie statistische Grundlagen verstanden haben. So wird Wissen lebendig, greifbar und nachhaltig.
+**"Erstelle eine To-Do-App für Studienorganisation"** → KI generiert vollständige Web-App → App läuft sofort im Browser
+
+Studierende werden zu **App-Architekten**, die ihre Visionen durch intelligente Prompts Realität werden lassen. Sie lernen Softwaredesign, UX-Konzepte und Problemlösung, ohne von Syntax-Details abgelenkt zu werden.
 
 ---
 
 ## 🚀 Kernfunktionen
 
-### Von der Idee zur lauffähigen App im Browser
+### ✅ Aktuell verfügbar (v1.0)
 
-- **Echte Anwendungsentwicklung**: Studierende arbeiten nicht mit Code-Schnipseln, sondern bauen vollständige Kleinanwendungen. Dank Pyodide (Python) und WebContainern (HTML/JS/Node.js) laufen diese Apps direkt im Browser – ohne komplexe Installationen.
+- **🤖 KI-Chat-Interface**: Intuitive Prompt-Eingabe für App-Beschreibungen in natürlicher Sprache
+- **🌐 WebContainer-Integration**: Echte Web-Apps laufen isoliert im Browser mit HTML/CSS/JavaScript
+- **💬 3-Tab-System**: Chat (KI-Kommunikation), WebContainer (App-Vorschau), Console (Output)
+- **📊 Smart Fallback**: Automatische Fallback-Modi für optimale Kompatibilität
+- **🔧 Vollständige Moodle-Integration**: Nahtlose Integration in bestehende Kursstrukturen
 
-- **Lernmaterial als Startpunkt**: Lehrende definieren Projektvorlagen, die direkt an die Kursinhalte anknüpfen und den Studierenden den perfekten Einstieg in ihre eigene App-Entwicklung geben.
+### 🎯 Nächste Features (Roadmap)
 
-- **KI als kreativer Partner**: Der integrierte KI-Assistent hilft nicht nur bei Fehlern, sondern agiert als Sparringspartner, der hilft, Ideen zu konkretisieren und aus einem einfachen Konzept ("Eine App zur Visualisierung von Wahlergebnissen") eine strukturierte Projektbasis zu schaffen.
+- **🧠 Claude-API Integration**: Intelligente App-Generierung basierend auf Prompts
+- **📱 Template-System**: Vorgefertigte App-Typen für verschiedene Anwendungsfälle  
+- **🐍 Python-Apps**: Pyodide-Integration für datenanalytische Anwendungen
+- **🎨 Erweiterte UI-Generierung**: Komplexere Apps mit modernen Frameworks
 
 ### 👥 Teilen, Entdecken und Kollaborieren
 
@@ -45,57 +54,86 @@ Studierende lernen am besten, indem sie schaffen. Sie bauen einen Finanzrechner,
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Entwicklungsstatus
 
-- **Phase 1**: Fundament des Moodle-Plugins mit Datenbank und Konfiguration. *(Abgeschlossen)*
+### ✅ Abgeschlossene Phasen
 
-- **Phase 2**: React SPA Frontend und interaktive UI. *(Abgeschlossen)*
+- **Phase 1**: Moodle-Plugin-Fundament *(Abgeschlossen)*
+  - Vollständige Datenbank-Integration
+  - Modulkonfiguration und -verwaltung
+  - Benutzer- und Kurskontext-Integration
 
-- **Phase 3**: Code-Editor Integration und API-Endpunkte. *(In Arbeit)*
+- **Phase 2**: React SPA Frontend *(Abgeschlossen)*
+  - Modernes 3-Tab-Interface (Chat, WebContainer, Console)
+  - Responsive Design mit Bootstrap-Integration
+  - Projekt-Management und -erstellung
 
-- **Phase 4**: Integration der Browser-Runtimes (Pyodide, WebContainer) und der Sharing-Funktionen (Projekt-Galerie).
+- **Phase 3**: KI-Chat & WebContainer *(Abgeschlossen)*
+  - Funktionsfähiges Chat-Interface für Prompts
+  - AJAX-Endpunkte für Backend-Kommunikation
+  - WebContainer-Integration mit Fallback-Modus
+  - Cross-Origin-Isolation-Support
 
-- **Phase 5**: Ausbau von Lernanalytik und Gamification.
+### 🔥 Nächste Phasen
 
-- **Phase 6**: Optimierung und Stabilisierung für den produktiven Einsatz.
+- **Phase 4**: Intelligente App-Generierung
+  - Claude-API Integration für echte KI-Funktionalität
+  - Template-basierte App-Erstellung
+  
+- **Phase 5**: Erweiterte Features
+  - Python-App-Support mit Pyodide
+  - Projekt-Galerie und Sharing-Funktionen
+  - Lernanalytik und Fortschritts-Tracking
 
 ---
 
-## 🛠️ Entwicklung & Build
+## 🛠️ Entwicklung & Setup
 
-### React Frontend Setup
-Das Plugin nutzt ein modernes React Frontend mit Vite als Build-Tool:
-
+### Quick Start
 ```bash
-# In das Frontend-Verzeichnis wechseln
-cd frontend/
-
-# Dependencies installieren
+# 1. Frontend Dependencies installieren
+cd mod/vibeyourcourse/frontend/
 npm install
 
-# Development Server für Frontend-Entwicklung
-npm run dev
-
-# Production Build erstellen
+# 2. Production Build erstellen  
 npm run build
+
+# 3. WebContainer Setup (wichtig!)
+# Apache mod_headers aktivieren für Cross-Origin-Isolation
+docker exec moodle-docker-webserver-1 a2enmod headers
+docker exec moodle-docker-webserver-1 service apache2 reload
 ```
 
 ### Projektstruktur
 ```
 mod/vibeyourcourse/
-├── frontend/           # React Development Environment
+├── frontend/              # React Development Environment
 │   ├── src/
-│   │   ├── App.jsx    # Haupt React-Komponente
-│   │   ├── App.css    # Alle UI-Styles
-│   │   └── main.jsx   # React Entry Point
-│   ├── vite.config.js # Build-Konfiguration
-│   └── package.json
-├── build/             # Compiled React App
-│   ├── bundle.js     # Single JavaScript Bundle
-│   ├── bundle.css    # Single CSS Bundle
+│   │   ├── App.jsx       # Haupt React-Komponente
+│   │   ├── WebContainer.jsx # WebContainer-Integration
+│   │   ├── App.css       # UI-Styles
+│   │   └── main.jsx      # React Entry Point
+│   ├── vite.config.js    # Build-Konfiguration
+│   └── package.json      # Dependencies (inkl. @webcontainer/api)
+├── build/                # Compiled React App
+│   ├── bundle.js        # Single JavaScript Bundle (~220kB)
+│   ├── bundle.css       # Single CSS Bundle
 │   └── index.html
-└── view.php          # PHP-Datei lädt React SPA
+├── ajax.php             # Backend-API für Chat & Datenbank
+├── view.php             # PHP-Datei lädt React SPA
+├── .htaccess           # Cross-Origin-Header für WebContainer
+├── WEBCONTAINER_SETUP.md # Setup-Anleitung für WebContainer
+└── TODO.md             # Aktueller Entwicklungsstand
 ```
 
+### Funktionsweise
+1. **Frontend**: React SPA mit 3-Tab-Interface (Chat, WebContainer, Console)
+2. **Backend**: PHP AJAX-Endpunkte für Prompt-Verarbeitung und Datenbank-Logging
+3. **WebContainer**: Echte Browser-Runtime für generierte Web-Apps
+4. **Fallback**: Intelligente Fallback-Modi für maximale Kompatibilität
+
 ### Moodle Integration
-Die `view.php` erstellt ein `<div id="vibeyourcourse-react-app"></div>` Container und lädt die kompilierten React-Bundles. Alle Moodle-spezifischen Daten (User-ID, Kurs-Context, etc.) werden über `window.vibeyourcourseConfig` an die React-App übergeben.
+- Vollständige Integration in Moodle-Aktivitätssystem
+- Nutzer-Context und Session-Management
+- Kurs-spezifische Projekt-Verwaltung
+- Datenbank-Logging aller KI-Interaktionen

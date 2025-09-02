@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
+import WebContainerComponent from './WebContainer'
 
 function App() {
   const [config, setConfig] = useState(null)
@@ -10,9 +11,15 @@ function App() {
   const [isCreatingProject, setIsCreatingProject] = useState(false)
   const [newProject, setNewProject] = useState({
     name: '',
-    runtime: 'python',
+    runtime: 'javascript',
     template: ''
   })
+  const [chatMessages, setChatMessages] = useState([])
+  const [currentPrompt, setCurrentPrompt] = useState('')
+  const [isProcessingPrompt, setIsProcessingPrompt] = useState(false)
+  const [activeTab, setActiveTab] = useState('chat')
+  const [webcontainerOutput, setWebcontainerOutput] = useState([])
+  const [isWebcontainerActive, setIsWebcontainerActive] = useState(false)
 
   useEffect(() => {
     // Get configuration from window object (set by PHP)
@@ -118,7 +125,7 @@ function App() {
         
         setProjects([newProjectData, ...(projects || [])])
         setShowModal(false)
-        setNewProject({ name: '', runtime: 'python', template: '' })
+        setNewProject({ name: '', runtime: 'javascript', template: '' })
         
         // Reload projects to get fresh data from server
         setTimeout(() => {
@@ -139,6 +146,8 @@ function App() {
   const openProject = (projectId) => {
     setCurrentProject(projectId)
     setCurrentView('ide')
+    // WebContainer beim Öffnen der IDE vorbereiten
+    setIsWebcontainerActive(true)
   }
 
   const closeIDE = () => {
@@ -154,6 +163,98 @@ function App() {
   const runCode = () => {
     // TODO: Implement code execution
     console.log('Running code...')
+  }
+
+  const sendPrompt = async () => {
+    if (!currentPrompt.trim()) return
+
+    const userMessage = {
+      id: Date.now(),
+      type: 'user',
+      content: currentPrompt,
+      timestamp: new Date()
+    }
+
+    setChatMessages(prev => [...prev, userMessage])
+    setCurrentPrompt('')
+    setIsProcessingPrompt(true)
+
+    try {
+      // TODO: Claude-API Integration hier später implementieren
+      // Erstmal zeigen wir nur eine Dummy-Antwort und starten WebContainer
+
+      const response = await fetch('/mod/vibeyourcourse/ajax.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'process_prompt',
+          cmid: config.cmid,
+          sesskey: config.sesskey,
+          prompt: currentPrompt,
+          project_id: currentProject
+        })
+      })
+
+      const result = await response.json()
+
+      if (result.success) {
+        const aiMessage = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: result.response || 'Verstanden! Ich starte die WebContainer-Integration für dein Projekt.',
+          timestamp: new Date()
+        }
+
+        setChatMessages(prev => [...prev, aiMessage])
+        
+        // WebContainer starten
+        startWebContainer()
+      } else {
+        const errorMessage = {
+          id: Date.now() + 1,
+          type: 'ai',
+          content: 'Entschuldigung, es gab einen Fehler bei der Verarbeitung deines Prompts.',
+          timestamp: new Date()
+        }
+        setChatMessages(prev => [...prev, errorMessage])
+      }
+    } catch (error) {
+      console.error('Fehler beim Senden des Prompts:', error)
+      const errorMessage = {
+        id: Date.now() + 1,
+        type: 'ai',
+        content: 'Netzwerkfehler beim Verarbeiten des Prompts.',
+        timestamp: new Date()
+      }
+      setChatMessages(prev => [...prev, errorMessage])
+    } finally {
+      setIsProcessingPrompt(false)
+    }
+  }
+
+  const startWebContainer = () => {
+    console.log('Starting WebContainer for Hello World...')
+    
+    setIsWebcontainerActive(true)
+    
+    const webcontainerMessage = {
+      id: Date.now() + 2,
+      type: 'system',
+      content: 'WebContainer wird gestartet! Wechsle zum WebContainer-Tab um die App zu sehen.',
+      timestamp: new Date()
+    }
+    
+    setChatMessages(prev => [...prev, webcontainerMessage])
+    setActiveTab('preview')
+  }
+
+  const handleWebcontainerOutput = (message) => {
+    setWebcontainerOutput(prev => [...prev, {
+      timestamp: new Date(),
+      message: message
+    }])
   }
 
   if (!config) {
@@ -318,25 +419,132 @@ function App() {
                 </div>
               </div>
 
-              {/* Output/Preview */}
+              {/* Chat & Output */}
               <div className="col-md-4 ide-output">
                 <ul className="nav nav-tabs">
                   <li className="nav-item">
-                    <a className="nav-link active">Console</a>
+                    <a 
+                      className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('chat')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      💬 KI Chat
+                    </a>
                   </li>
                   <li className="nav-item">
-                    <a className="nav-link">Preview</a>
+                    <a 
+                      className={`nav-link ${activeTab === 'preview' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('preview')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      🌐 WebContainer
+                    </a>
                   </li>
-                  {config?.aiAssistanceLevel !== 'none' && (
-                    <li className="nav-item">
-                      <a className="nav-link">AI Assistant</a>
-                    </li>
-                  )}
+                  <li className="nav-item">
+                    <a 
+                      className={`nav-link ${activeTab === 'console' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('console')}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      📺 Console
+                    </a>
+                  </li>
                 </ul>
-                <div className="tab-content">
-                  <div className="tab-pane fade show active">
-                    <div className="console"></div>
-                  </div>
+                <div className="tab-content" style={{ height: '400px', border: '1px solid #ddd' }}>
+                  {/* Chat Tab */}
+                  {activeTab === 'chat' && (
+                    <div className="tab-pane fade show active h-100 d-flex flex-column">
+                      <div className="chat-messages flex-grow-1 p-2" style={{ overflow: 'auto', maxHeight: '300px' }}>
+                        {chatMessages.length === 0 ? (
+                          <div className="text-center text-muted mt-3">
+                            <p>💡 Beschreibe deine App-Idee!</p>
+                            <small>Beispiel: "Erstelle eine To-Do-App mit React"</small>
+                          </div>
+                        ) : (
+                          chatMessages.map((message) => (
+                            <div key={message.id} className={`message mb-2 ${message.type}`}>
+                              <div className={`badge ${
+                                message.type === 'user' ? 'badge-primary' : 
+                                message.type === 'ai' ? 'badge-success' : 'badge-info'
+                              } mb-1`}>
+                                {message.type === 'user' ? '👤 Du' : 
+                                 message.type === 'ai' ? '🤖 KI' : '⚙️ System'}
+                              </div>
+                              <div className="message-content p-2 bg-light rounded">
+                                {message.content}
+                              </div>
+                              <small className="text-muted">
+                                {message.timestamp.toLocaleTimeString()}
+                              </small>
+                            </div>
+                          ))
+                        )}
+                        {isProcessingPrompt && (
+                          <div className="message mb-2">
+                            <div className="badge badge-success mb-1">🤖 KI</div>
+                            <div className="message-content p-2 bg-light rounded">
+                              <span className="spinner-border spinner-border-sm mr-2"></span>
+                              Verarbeite deinen Prompt...
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="chat-input p-2 border-top">
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Beschreibe deine App-Idee..."
+                            value={currentPrompt}
+                            onChange={(e) => setCurrentPrompt(e.target.value)}
+                            onKeyPress={(e) => e.key === 'Enter' && sendPrompt()}
+                            disabled={isProcessingPrompt}
+                          />
+                          <div className="input-group-append">
+                            <button
+                              className="btn btn-primary"
+                              onClick={sendPrompt}
+                              disabled={isProcessingPrompt || !currentPrompt.trim()}
+                            >
+                              {isProcessingPrompt ? '⏳' : '🚀'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* WebContainer Preview Tab */}
+                  {activeTab === 'preview' && (
+                    <div className="tab-pane fade show active h-100">
+                      <WebContainerComponent 
+                        isActive={isWebcontainerActive}
+                        onOutput={handleWebcontainerOutput}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Console Tab */}
+                  {activeTab === 'console' && (
+                    <div className="tab-pane fade show active h-100">
+                      <div className="console h-100 bg-dark text-light p-2" style={{ fontFamily: 'monospace', overflow: 'auto' }}>
+                        <div className="text-info">🖥️ WebContainer Console</div>
+                        <div className="text-success">$ Waiting for commands...</div>
+                        <div className="text-muted">---</div>
+                        {webcontainerOutput.map((output, index) => (
+                          <div key={index} className="mt-1">
+                            <span className="text-muted">{output.timestamp.toLocaleTimeString()}</span>
+                            <span className="ml-2">{output.message}</span>
+                          </div>
+                        ))}
+                        {webcontainerOutput.length === 0 && (
+                          <div className="text-muted mt-2">
+                            Starte einen Prompt, um WebContainer-Output zu sehen...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -379,11 +587,12 @@ function App() {
                     onChange={(e) => setNewProject({...newProject, runtime: e.target.value})}
                     required
                   >
-                    {config?.allowedRuntimes?.map((runtime) => (
-                      <option key={runtime} value={runtime}>{runtime}</option>
+                    {config?.allowedRuntimes?.filter(runtime => runtime !== 'python').map((runtime) => (
+                      <option key={runtime} value={runtime}>
+                        {runtime === 'javascript' ? 'JavaScript/Web (WebContainer)' : runtime}
+                      </option>
                     )) || [
-                      <option key="python" value="python">Python</option>,
-                      <option key="javascript" value="javascript">JavaScript</option>
+                      <option key="javascript" value="javascript">JavaScript/Web (WebContainer)</option>
                     ]}
                   </select>
                 </div>

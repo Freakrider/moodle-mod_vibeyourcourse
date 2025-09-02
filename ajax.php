@@ -81,7 +81,7 @@ try {
 }
 
 // Validate sesskey for write operations
-if (in_array($action, ['create_project', 'update_project', 'delete_project'])) {
+if (in_array($action, ['create_project', 'createproject', 'update_project', 'updateproject', 'delete_project', 'deleteproject', 'process_prompt', 'processprompt'])) {
     $sesskey = optional_param('sesskey', '', PARAM_RAW);
     if (!confirm_sesskey($sesskey)) {
         http_response_code(403);
@@ -96,10 +96,12 @@ header('Content-Type: application/json');
 try {
     switch ($action) {
         case 'get_projects':
+        case 'getprojects':
             echo json_encode(get_user_projects($moduleinstance->id, $USER->id));
             break;
             
         case 'create_project':
+        case 'createproject':
             $project_data = [
                 'name' => required_param('name', PARAM_TEXT),
                 'runtime' => required_param('runtime', PARAM_ALPHA),
@@ -109,11 +111,13 @@ try {
             break;
             
         case 'get_project':
+        case 'getproject':
             $project_id = required_param('project_id', PARAM_INT);
             echo json_encode(get_project_details($project_id, $USER->id));
             break;
             
         case 'update_project':
+        case 'updateproject':
             $project_id = required_param('project_id', PARAM_INT);
             $project_data = [
                 'name' => optional_param('name', null, PARAM_TEXT),
@@ -125,8 +129,16 @@ try {
             break;
             
         case 'delete_project':
+        case 'deleteproject':
             $project_id = required_param('project_id', PARAM_INT);
             echo json_encode(delete_project($project_id, $USER->id));
+            break;
+            
+        case 'process_prompt':
+        case 'processprompt':
+            $prompt = required_param('prompt', PARAM_TEXT);
+            $project_id = optional_param('project_id', 0, PARAM_INT);
+            echo json_encode(process_user_prompt($prompt, $project_id, $USER->id, $moduleinstance->id));
             break;
             
         default:
@@ -346,6 +358,64 @@ function get_initial_project_files($runtime, $template = '') {
     }
     
     return $files;
+}
+
+/**
+ * Process user prompt for AI interaction
+ */
+function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) {
+    global $DB;
+    
+    try {
+        // Sanitize and validate prompt
+        $prompt = clean_text($prompt);
+        if (empty(trim($prompt))) {
+            return [
+                'success' => false,
+                'error' => 'Prompt darf nicht leer sein.'
+            ];
+        }
+        
+        // Log the prompt interaction
+        $interaction_record = new stdClass();
+        $interaction_record->vibeyourcourse_id = $vibeyourcourse_id;
+        $interaction_record->userid = $userid;
+        $interaction_record->project_id = $project_id > 0 ? $project_id : null;
+        $interaction_record->user_prompt = $prompt;  // Korrigiert: war "prompt", muss "user_prompt" sein
+        $interaction_record->ai_response = 'Prompt erhalten. WebContainer wird gestartet...';  // Korrigiert: war "response"
+        $interaction_record->ai_model = 'placeholder'; // TODO: Claude model identifier
+        $interaction_record->token_count = strlen($prompt); // Rough estimate
+        $interaction_record->processing_time = 0; // TODO: Actual processing time
+        $interaction_record->timecreated = time();
+        
+        $interaction_id = $DB->insert_record('vibeyourcourse_ai_interactions', $interaction_record);
+        
+        // TODO: Hier wird später die Claude-API-Integration stehen
+        // Für jetzt geben wir eine Standard-Antwort zurück
+        $response = "Verstanden! Ich starte die WebContainer-Integration für dein Projekt. " .
+                   "Prompt empfangen: \"" . substr($prompt, 0, 50) . (strlen($prompt) > 50 ? "..." : "") . "\"";
+        
+        // Update the response in the database
+        $interaction_record->id = $interaction_id;
+        $interaction_record->ai_response = $response;  // Korrigiert: war "response"
+        $interaction_record->processing_time = 1; // Dummy value
+        $DB->update_record('vibeyourcourse_ai_interactions', $interaction_record);
+        
+        return [
+            'success' => true,
+            'response' => $response,
+            'interaction_id' => $interaction_id,
+            'webcontainer_ready' => true,
+            'message' => 'Prompt erfolgreich verarbeitet. WebContainer ist bereit.'
+        ];
+        
+    } catch (Exception $e) {
+        error_log("Fehler bei process_user_prompt: " . $e->getMessage());
+        return [
+            'success' => false,
+            'error' => 'Fehler beim Verarbeiten des Prompts: ' . $e->getMessage()
+        ];
+    }
 }
 
 /**

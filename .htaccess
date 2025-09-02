@@ -1,0 +1,24 @@
+# Cross-Origin-Isolation Headers für WebContainer
+# Diese Header sind erforderlich, damit WebContainer SharedArrayBuffer verwenden kann
+
+<IfModule mod_headers.c>
+    # Cross-Origin-Embedder-Policy (COEP)
+    Header always set Cross-Origin-Embedder-Policy "require-corp"
+    
+    # Cross-Origin-Opener-Policy (COOP) 
+    Header always set Cross-Origin-Opener-Policy "same-origin"
+    
+    # Für JavaScript-Dateien zusätzliche Header
+    <FilesMatch "\.(js|mjs)$">
+        Header always set Cross-Origin-Resource-Policy "cross-origin"
+    </FilesMatch>
+    
+    # Für das Build-Verzeichnis
+    <Directory "build">
+        Header always set Cross-Origin-Resource-Policy "cross-origin"
+    </Directory>
+</IfModule>
+
+# Alternative für nginx (falls Apache mod_headers nicht verfügbar)
+# add_header Cross-Origin-Embedder-Policy "require-corp";
+# add_header Cross-Origin-Opener-Policy "same-origin";

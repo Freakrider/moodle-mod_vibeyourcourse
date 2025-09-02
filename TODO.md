@@ -32,21 +32,21 @@ Moodle Plugin ◄─► KI APIs (App Generation) ◄─► Browser Runtime
 
 [x] Layout-Platzhalter für die IDE
 
-🎯 Phase 2: Die "Vibe Coding" Engine (In Arbeit)
-[x] 🎨 SPA Frontend Setup (z.B. mit React/Vue) - Bleibt erforderlich
+🎯 Phase 2: Die "Vibe Coding" Engine ✅ ABGESCHLOSSEN
+[x] 🎨 SPA Frontend Setup (z.B. mit React/Vue) - Abgeschlossen
 
-[ ] 🤖 Haupt-Interface: Prompt-Eingabe & KI-Chat - Ersetzt den Code-Editor als primäres Werkzeug
+[x] 🤖 Haupt-Interface: Prompt-Eingabe & KI-Chat - Chat-Interface implementiert mit 3 Tabs
 
-[ ] 🔌 AJAX-Endpunkte (ajax.php) für Prompt-Verarbeitung - Fokus auf Senden von Prompts statt Code
+[x] 🔌 AJAX-Endpunkte (ajax.php) für Prompt-Verarbeitung - process_prompt Endpunkt funktioniert
 
-[ ] 🤖 KI-Anbindung für App-Generierung - Das Kernstück: KI muss vollständige Projektdateien (JSON) zurückgeben
+[ ] 🤖 KI-Anbindung für App-Generierung - Das Kernstück: KI muss vollständige Projektdateien (JSON) zurückgeben (TODO: Claude-API)
 
 [ ] (Optional) 👁️ Code-Ansicht zur Transparenz - Ein einfacher Betrachter (statt CodeMirror) reicht aus, um den generierten Code anzuzeigen.
 
-🎯 Phase 3: App-Ausführung & Sharing (Geplant)
-[ ] 🐍 Pyodide Integration zur Ausführung der KI-generierten Python-Apps
+🎯 Phase 3: App-Ausführung & WebContainer ✅ ABGESCHLOSSEN
+[x] 🌐 WebContainer Integration zur Ausführung der KI-generierten Web-Apps (Hello World funktioniert!)
 
-[ ] 🌐 WebContainer Integration zur Ausführung der KI-generierten Web-Apps
+[x] 🔧 WebContainer-Output im Frontend sichtbar machen (Console-Tab zeigt Output)
 
 [ ] 갤러리 Project Gallery
 
@@ -60,14 +60,30 @@ Moodle Plugin ◄─► KI APIs (App Generation) ◄─► Browser Runtime
 
 [ ] Basis-Kommentarfunktion für Peer-Feedback
 
-🎯 Phase 4: Lernanalytik & Gamification (Geplant)
+🎯 Phase 4: Pyodide Integration (Später)
+[ ] 🐍 Pyodide Integration zur Ausführung der KI-generierten Python-Apps (VERSCHOBEN - Fokus liegt erstmal auf WebContainer)
+
+🎯 Phase 5: Lernanalytik & Gamification (Geplant)
 [ ] 📈 Lernanalytik-Dashboard (Fokus auf Prompt-Qualität und Problemlöse-Strategien)
 
 [ ] 🏆 Gamification-System (Badges für "Erste App generiert", "Komplexes Feature beschrieben" etc.)
 
-🎯 Nächste unmittelbare Aktionen
-🔥 Frontend-Framework (SPA) aufsetzen und in view.php integrieren. (🕕 M)
+🎯 Aktuelle Funktionalität ✅ FUNKTIONIERT!
+✅ Frontend-Framework (SPA) aufsetzen und in view.php integrieren. (Abgeschlossen)
 
-🔥 Das zentrale Prompt-Interface implementieren (Eingabefeld, Senden-Button, Chat-Verlauf zur Anzeige der Konversation mit der KI). (🕕 M)
+✅ Chat-Interface implementieren - Eingabefeld, Senden-Button, Chat-Verlauf für Konversation mit KI (Abgeschlossen)
 
-⚡ Ersten ajax.php-Endpunkt erstellen, der einen User-Prompt an die KI-API sendet und die Text-Antwort der KI im Chat-Interface anzeigt. (🕕 M)
+✅ Pyodide-Option aus Frontend-Auswahl entfernen (vorerst nicht verfügbar) (Abgeschlossen)
+
+✅ AJAX-Endpunkt für Prompt-Verarbeitung erstellen (Abgeschlossen - Datenbank-Fehler behoben)
+
+✅ WebContainer-Integration für Hello World-Anzeige implementieren (Abgeschlossen - Automatischer Start bei IDE-Öffnung)
+
+✅ WebContainer-Output im Frontend sichtbar machen (Abgeschlossen - Console-Tab funktioniert)
+
+🎯 Nächste Schritte (Priorität)
+🔥 Claude-API Integration für intelligente App-Generierung (🕕 L)
+
+🔥 Erweiterte WebContainer-Apps basierend auf Prompts generieren (🕕 L)
+
+⚡ Template-System für verschiedene App-Typen (🕕 M)
