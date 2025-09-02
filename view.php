@@ -69,6 +69,10 @@ $PAGE->set_title(format_string($moduleinstance->name));
 $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($modulecontext);
 
+// Set Cross-Origin-Isolation headers for WebContainer
+header('Cross-Origin-Embedder-Policy: require-corp');
+header('Cross-Origin-Opener-Policy: same-origin');
+
 // Load jQuery
 $PAGE->requires->jquery();
 

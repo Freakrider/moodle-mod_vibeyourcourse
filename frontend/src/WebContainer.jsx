@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { WebContainer } from '@webcontainer/api'
+
+// WebContainer wird dynamisch geladen um optional zu bleiben
+let WebContainer = null
 
 function WebContainerComponent({ isActive, onOutput }) {
   const iframeRef = useRef(null)
@@ -19,6 +21,18 @@ function WebContainerComponent({ isActive, onOutput }) {
     onOutput?.('🚀 WebContainer wird initialisiert...')
 
     try {
+      // Dynamisch WebContainer API laden
+      if (!WebContainer) {
+        onOutput?.('📦 Lade WebContainer API...')
+        const { WebContainer: WC } = await import('@webcontainer/api')
+        WebContainer = WC
+        onOutput?.('✅ WebContainer API geladen!')
+      }
+      
+      // Detaillierte Diagnose der Umgebung
+      onOutput?.(`🔍 Diagnose: SharedArrayBuffer = ${typeof SharedArrayBuffer !== 'undefined' ? '✅' : '❌'}`)
+      onOutput?.(`🔍 Diagnose: crossOriginIsolated = ${crossOriginIsolated ? '✅' : '❌'}`)
+      
       // Check if SharedArrayBuffer is available
       if (typeof SharedArrayBuffer === 'undefined') {
         throw new Error('SharedArrayBuffer ist nicht verfügbar. Cross-Origin-Isolation erforderlich.')
@@ -26,13 +40,21 @@ function WebContainerComponent({ isActive, onOutput }) {
 
       // Check cross-origin isolation
       if (!crossOriginIsolated) {
-        onOutput?.('⚠️ Cross-Origin-Isolation nicht aktiv. Versuche alternatives Setup...')
-        // Fallback für Entwicklungsumgebung
+        onOutput?.('⚠️ Cross-Origin-Isolation nicht aktiv.')
+        onOutput?.('🔧 Prüfe ob Header korrekt gesetzt sind...')
+        
+        // Weitere Diagnoseinformationen
+        if (window.location.protocol === 'http:') {
+          onOutput?.('💡 Hinweis: HTTPS kann bei WebContainer helfen')
+        }
+        
+        onOutput?.('🔄 Starte Fallback-Modus für Entwicklung...')
         await createFallbackPreview()
         return
       }
 
-      // Create WebContainer instance
+      // Create WebContainer instance (kann nur einmal aufgerufen werden!)
+      onOutput?.('🎯 Erstelle WebContainer-Instanz...')
       const instance = await WebContainer.boot()
       setWebcontainer(instance)
       setIsBooted(true)
@@ -57,7 +79,7 @@ function WebContainerComponent({ isActive, onOutput }) {
   const createHelloWorldProject = async (instance) => {
     onOutput?.('📁 Erstelle Hello World Projekt...')
 
-    // Define the project files
+    // Define the project files nach WebContainer API-Spezifikation
     const files = {
       'package.json': {
         file: {
@@ -68,9 +90,11 @@ function WebContainerComponent({ isActive, onOutput }) {
             main: 'index.js',
             scripts: {
               start: 'node index.js',
-              dev: 'python -m http.server 3000',
+              dev: 'node server.js'
             },
-            dependencies: {}
+            dependencies: {
+              // Keine externen Dependencies für dieses einfache Beispiel
+            }
           }, null, 2)
         }
       },
@@ -172,14 +196,19 @@ function WebContainerComponent({ isActive, onOutput }) {
 </html>`
         }
       },
-      'index.js': {
+      'server.js': {
         file: {
-          contents: `// Hello World Express Server
+          contents: `// Hello World Express-ähnlicher Server
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
 const server = http.createServer((req, res) => {
+  // CORS Headers für WebContainer
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.url === '/' || req.url === '/index.html') {
     fs.readFile(path.join(__dirname, 'index.html'), 'utf8', (err, data) => {
       if (err) {
@@ -199,40 +228,60 @@ const server = http.createServer((req, res) => {
 const PORT = 3000;
 server.listen(PORT, () => {
   console.log(\`🚀 Hello World Server läuft auf Port \${PORT}\`);
+  console.log(\`📍 Zugriff über WebContainer URL\`);
 });`
+        }
+      },
+      'index.js': {
+        file: {
+          contents: `// Einfaches Hello World Skript
+console.log('🎉 Hello World von WebContainer!');
+console.log('🌐 WebContainer ist eine Browser-API, kein Docker!');
+console.log('📦 Node.js läuft direkt im Browser');
+
+// Starte den HTTP Server
+require('./server.js');`
         }
       }
     }
 
     try {
-      // Mount the file system
+      // Mount the file system nach WebContainer API
       await instance.mount(files)
       onOutput?.('📁 Projektdateien erstellt!')
 
-      // Start the HTTP server to serve the HTML
-      const process = await instance.spawn('python', ['-m', 'http.server', '3000'])
-      onOutput?.('🌐 HTTP Server gestartet auf Port 3000')
-
-      // Wait for server to be ready and get the URL
+      // Server-ready Event listener registrieren BEVOR wir den Server starten
       instance.on('server-ready', (port, url) => {
         setUrl(url)
         onOutput?.(`🔗 App verfügbar unter: ${url}`)
       })
 
-      // Alternative: Get the URL directly if server-ready event doesn't fire
+      // Starte den Node.js HTTP Server
+      const serverProcess = await instance.spawn('npm', ['run', 'dev'])
+      onOutput?.('🌐 Node.js Server wird gestartet...')
+
+      // Log Server-Output
+      serverProcess.output.pipeTo(
+        new WritableStream({
+          write(data) {
+            onOutput?.(`[Server] ${data}`)
+          }
+        })
+      )
+
+      // Warten auf Server-Start
       setTimeout(async () => {
         try {
+          // WebContainer stellt automatisch eine URL bereit
           const url = await instance.url
           if (url) {
             setUrl(url)
             onOutput?.(`🔗 App verfügbar unter: ${url}`)
           }
         } catch (error) {
-          // Try a different approach
-          setUrl('http://localhost:3000')
-          onOutput?.('🔗 App verfügbar unter: http://localhost:3000')
+          onOutput?.('⚠️ URL noch nicht verfügbar, Server startet noch...')
         }
-      }, 2000)
+      }, 3000)
 
     } catch (error) {
       console.error('Fehler beim Erstellen des Projekts:', error)

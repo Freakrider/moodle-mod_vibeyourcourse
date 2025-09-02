@@ -11,9 +11,9 @@
 ```
 ┌─────────────────────┐    ┌─────────────────────┐    ┌─────────────────────┐
 │   Moodle Core       │    │  mod_vibeyourcourse │    │   Browser Runtime   │
-│ (Nutzer, Kurse,     │◄──►│  (Projekt-Mgmt,     │◄──►│  (Pyodide für Python │
-│  Bewertungen)       │    │   KI-Logik, UI,     │    │   WebContainer für  │
-│                     │    │   Projekt-Galerie)  │    │   Web-Apps)         │
+│ (Nutzer, Kurse,     │◄──►│  (Projekt-Mgmt,     │◄──►│ (Pyodide für Python │
+│  Bewertungen)       │    │   KI-Logik, UI,     │    │  WebContainer-API   │
+│                     │    │   Projekt-Galerie)  │    │  für Node.js/Web)   │
 └─────────────────────┘    └─────────────────────┘    └─────────────────────┘
                                       ↓
                            ┌─────────────────────┐
@@ -55,8 +55,8 @@
 - **Single Page Application** (z.B. React/Vue) mit CodeMirror 6
 
 ### Browser Runtimes
-- **Pyodide** (Python)
-- **WebContainer** (Node.js, npm für Web-Apps)
+- **Pyodide** (Python - geplant)
+- **WebContainer** (StackBlitz Browser-API für Node.js/npm im Browser)
 
 ---
 

@@ -16,9 +16,10 @@ Studierende werden zu **App-Architekten**, die ihre Visionen durch intelligente 
 ### ✅ Aktuell verfügbar (v1.0)
 
 - **🤖 KI-Chat-Interface**: Intuitive Prompt-Eingabe für App-Beschreibungen in natürlicher Sprache
-- **🌐 WebContainer-Integration**: Echte Web-Apps laufen isoliert im Browser mit HTML/CSS/JavaScript
+- **🌐 WebContainer-Integration**: Browser-API von StackBlitz für echte Node.js-Apps im Browser
 - **💬 3-Tab-System**: Chat (KI-Kommunikation), WebContainer (App-Vorschau), Console (Output)
-- **📊 Smart Fallback**: Automatische Fallback-Modi für optimale Kompatibilität
+- **📊 Smart Fallback**: Automatische Fallback-Modi bei fehlender Cross-Origin-Isolation
+- **🔧 Cross-Origin-Isolation**: Vollständige Header-Unterstützung für SharedArrayBuffer
 - **🔧 Vollständige Moodle-Integration**: Nahtlose Integration in bestehende Kursstrukturen
 
 ### 🎯 Nächste Features (Roadmap)
@@ -71,8 +72,9 @@ Studierende werden zu **App-Architekten**, die ihre Visionen durch intelligente 
 - **Phase 3**: KI-Chat & WebContainer *(Abgeschlossen)*
   - Funktionsfähiges Chat-Interface für Prompts
   - AJAX-Endpunkte für Backend-Kommunikation
-  - WebContainer-Integration mit Fallback-Modus
-  - Cross-Origin-Isolation-Support
+  - WebContainer Browser-API Integration (StackBlitz)
+  - Cross-Origin-Isolation-Support für SharedArrayBuffer
+  - Automatische Fallback-Modi bei fehlender Isolation
 
 ### 🔥 Nächste Phasen
 
@@ -98,10 +100,13 @@ npm install
 # 2. Production Build erstellen  
 npm run build
 
-# 3. WebContainer Setup (wichtig!)
-# Apache mod_headers aktivieren für Cross-Origin-Isolation
+# 3. WebContainer Setup (Cross-Origin-Isolation für Browser-API)
+# Apache mod_headers aktivieren für SharedArrayBuffer
 docker exec moodle-docker-webserver-1 a2enmod headers
 docker exec moodle-docker-webserver-1 service apache2 reload
+
+# 4. Test-Seite aufrufen (optional)
+# http://localhost/mod/vibeyourcourse/test_headers.php
 ```
 
 ### Projektstruktur
@@ -120,17 +125,19 @@ mod/vibeyourcourse/
 │   ├── bundle.css       # Single CSS Bundle
 │   └── index.html
 ├── ajax.php             # Backend-API für Chat & Datenbank
-├── view.php             # PHP-Datei lädt React SPA
-├── .htaccess           # Cross-Origin-Header für WebContainer
-├── WEBCONTAINER_SETUP.md # Setup-Anleitung für WebContainer
+├── view.php             # PHP-Datei lädt React SPA (mit Cross-Origin-Headers)
+├── .htaccess           # Cross-Origin-Header für WebContainer Browser-API
+├── WEBCONTAINER_GUIDE.md # Vollständige WebContainer-Dokumentation
+├── test_headers.php    # Diagnose-Tool für Cross-Origin-Isolation
 └── TODO.md             # Aktueller Entwicklungsstand
 ```
 
 ### Funktionsweise
 1. **Frontend**: React SPA mit 3-Tab-Interface (Chat, WebContainer, Console)
 2. **Backend**: PHP AJAX-Endpunkte für Prompt-Verarbeitung und Datenbank-Logging
-3. **WebContainer**: Echte Browser-Runtime für generierte Web-Apps
-4. **Fallback**: Intelligente Fallback-Modi für maximale Kompatibilität
+3. **WebContainer**: StackBlitz Browser-API für echte Node.js-Apps im Browser
+4. **Cross-Origin-Isolation**: Headers für SharedArrayBuffer-Support
+5. **Fallback**: Intelligente Fallback-Modi bei fehlender Isolation
 
 ### Moodle Integration
 - Vollständige Integration in Moodle-Aktivitätssystem

@@ -44,9 +44,13 @@ Moodle Plugin ◄─► KI APIs (App Generation) ◄─► Browser Runtime
 [ ] (Optional) 👁️ Code-Ansicht zur Transparenz - Ein einfacher Betrachter (statt CodeMirror) reicht aus, um den generierten Code anzuzeigen.
 
 🎯 Phase 3: App-Ausführung & WebContainer ✅ ABGESCHLOSSEN
-[x] 🌐 WebContainer Integration zur Ausführung der KI-generierten Web-Apps (Hello World funktioniert!)
+[x] 🌐 WebContainer Integration zur Ausführung der KI-generierten Web-Apps (Browser-API korrekt implementiert!)
 
 [x] 🔧 WebContainer-Output im Frontend sichtbar machen (Console-Tab zeigt Output)
+
+[x] 🔧 Cross-Origin-Isolation Headers implementiert für SharedArrayBuffer Support
+
+[x] 🧹 Überflüssige Docker-Setup-Skripte entfernt (WebContainer ist Browser-API, kein Docker!)
 
 [ ] 갤러리 Project Gallery
 
