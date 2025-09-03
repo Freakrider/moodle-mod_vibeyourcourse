@@ -120,10 +120,17 @@ function App() {
 
       const result = await response.json()
       
+      console.log('Course Files AJAX Response:', result)
+      
       if (result.success) {
         setCourseFiles(result.files || [])
+        console.log(`Loaded ${result.files?.length || 0} course files`)
+        if (result.debug) {
+          console.log('Course Files Debug Info:', result.debug)
+        }
       } else {
         console.error('Fehler beim Laden der Course Files:', result.error)
+        console.error('Debug Info:', result.debug)
         setCourseFiles([])
       }
     } catch (error) {
@@ -621,7 +628,11 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                   <div className="file-explorer-content p-2" style={{ maxHeight: '200px', overflow: 'auto' }}>
                     {courseFiles.length === 0 ? (
                       <div className="text-center text-muted">
-                        <small>Keine Course Files</small>
+                        <small>Keine Course Files gefunden</small>
+                        <br />
+                        <small style={{ fontSize: '0.7rem' }}>
+                          Überprüfe Browser-Konsole für Debug-Info
+                        </small>
                       </div>
                     ) : (
                       courseFiles.map((file, index) => (
@@ -630,7 +641,7 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                           className="file-item p-1 mb-1 rounded cursor-pointer bg-light"
                           onClick={() => window.open(file.url, '_blank')}
                           style={{ cursor: 'pointer', fontSize: '0.85rem' }}
-                          title={`${file.name} (${file.size})`}
+                          title={`${file.name} (${file.size}) - Source: ${file.source || 'unknown'}`}
                         >
                           <div className="d-flex align-items-center">
                             <span className="file-icon mr-1" style={{ fontSize: '0.8rem' }}>
@@ -646,10 +657,21 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                                file.type === 'file' ? '📁' : '📄'}
                             </span>
                             <div className="file-details flex-grow-1">
-                              <span className="file-name d-block" title={file.name}>
-                                {file.name.length > 12 ? `${file.name.substring(0, 9)}...` : file.name}
+                              <span className="file-name d-block" title={file.display_name || file.name}>
+                                {(file.display_name || file.name).length > 12 ? 
+                                  `${(file.display_name || file.name).substring(0, 9)}...` : 
+                                  (file.display_name || file.name)}
                               </span>
-                              <small className="text-muted">{file.size}</small>
+                              <div className="d-flex justify-content-between" style={{ fontSize: '0.7rem' }}>
+                                <small className="text-muted">{file.size}</small>
+                                {file.source && (
+                                  <small className="text-info">
+                                    {file.source === 'resource' ? '📄' : 
+                                     file.source === 'folder' ? '📁' : 
+                                     file.source === 'course' ? '🎓' : '❓'}
+                                  </small>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>

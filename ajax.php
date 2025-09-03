@@ -346,7 +346,7 @@ function get_initial_project_files($runtime, $template = '') {
             break;
             
         case 'javascript':
-            $files['index.html'] = "<!DOCTYPE html>\n<html>\n<head>\n    <title>My JavaScript Project</title>\n</head>\n<body>\n    <h1>Hello, World!</h1>\n    <script src=\"script.js\"></script>\n</body>\n</html>";
+            $files['index.html'] = "<!DOCTYPE html>\n<html>\n<head>\n    <title>My JavaScript Project</title>\n</head>\n<body>\n    <h1>Vote for Moodle Goes Vibe!</h1>\n    <script src=\"script.js\"></script>\n</body>\n</html>";
             $files['script.js'] = "// Welcome to your JavaScript project!\nconsole.log('Hello, World!');\n";
             $files['style.css'] = "/* Add your styles here */\nbody {\n    font-family: Arial, sans-serif;\n    margin: 0;\n    padding: 20px;\n}\n";
             break;
@@ -478,62 +478,119 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
  * Get course files (resources) from the current course
  */
 function get_course_files($course_id) {
-    global $DB, $CFG;
-    
-    try {
-        // Get all resource modules (files) in this course
-        $sql = "SELECT cm.id as cmid, cm.instance, r.name, r.intro, f.filename, f.filesize, f.mimetype, f.contenthash
-                FROM {course_modules} cm
-                JOIN {modules} m ON m.id = cm.module
-                JOIN {resource} r ON r.id = cm.instance
-                JOIN {files} f ON f.itemid = r.id AND f.component = 'mod_resource' AND f.filearea = 'content'
-                WHERE cm.course = :courseid 
-                AND m.name = 'resource'
-                AND cm.visible = 1
-                AND f.filename != '.'
-                ORDER BY r.name";
-        
-        $resources = $DB->get_records_sql($sql, ['courseid' => $course_id]);
-        
-        $files = [];
-        foreach ($resources as $resource) {
-            // Generate file URL
-            $file_url = $CFG->wwwroot . '/pluginfile.php/' . 
-                       context_module::instance($resource->cmid)->id . 
-                       '/mod_resource/content/0/' . $resource->filename;
-            
-            // Determine file type from mimetype
-            $file_type = get_file_type_from_mimetype($resource->mimetype);
-            
-            // Format file size
-            $file_size = format_file_size($resource->filesize);
-            
-            $files[] = [
-                'name' => $resource->filename,
-                'display_name' => $resource->name,
-                'type' => $file_type,
-                'size' => $file_size,
-                'mimetype' => $resource->mimetype,
-                'url' => $file_url,
-                'intro' => $resource->intro
-            ];
-        }
-        
-        return [
-            'success' => true,
-            'files' => $files
-        ];
-        
-    } catch (Exception $e) {
-        error_log("Error getting course files: " . $e->getMessage());
-        return [
-            'success' => false,
-            'error' => 'Fehler beim Laden der Course Files: ' . $e->getMessage(),
-            'files' => []
-        ];
-    }
-}
+    global $CFG, $DB, $USER;
 
+    require_once($CFG->libdir . '/filelib.php');
+    $fs = get_file_storage();
+    $files = [];
+
+    // 0) Kurs-Kontext
+    $coursectx = context_course::instance($course_id);
+
+    // Hilfs-Lambda: URL & Metadaten bauen
+    $build_entry = function($storedfile, $displayname, $source, $cmid = null) use ($CFG) {
+        $contextid = $storedfile->get_contextid();
+        $component = $storedfile->get_component();      // z.B. 'mod_resource'
+        $filearea  = $storedfile->get_filearea();       // z.B. 'content'
+        $itemid    = $storedfile->get_itemid();         // meist 0
+        $filepath  = $storedfile->get_filepath();       // beginnt/endet mit '/'
+        $filename  = $storedfile->get_filename();
+
+        // Sichere URL bauen (encodiert Sonderzeichen korrekt)
+        $url = moodle_url::make_pluginfile_url(
+            $contextid, $component, $filearea, $itemid, $filepath, $filename
+        )->out(false);
+
+        // MIME & Typ
+        $mimetype = $storedfile->get_mimetype();
+        $type = get_file_type_from_mimetype($mimetype);
+
+        return [
+            'name'         => $filename,
+            'display_name' => $displayname,
+            'type'         => $type,
+            'size'         => display_size($storedfile->get_filesize()),
+            'mimetype'     => $mimetype,
+            'url'          => $url,
+            'intro'        => null,
+            'source'       => $source,
+            'cmid'         => $cmid,
+            'path'         => $filepath
+        ];
+    };
+
+    // 1) Activities im Kurs (Resource + Folder)
+    $modinfo = get_fast_modinfo($course_id, $USER->id);
+    foreach ($modinfo->cms as $cm) {
+        if (!$cm->uservisible) { continue; } // respektiert Sichtbarkeit/Zugriff
+        if (!in_array($cm->modname, ['resource', 'folder'])) { continue; }
+
+        $modctx = context_module::instance($cm->id);
+
+        // a) RESOURCE -> content/0/*
+        if ($cm->modname === 'resource') {
+            $storedfiles = $fs->get_area_files($modctx->id, 'mod_resource', 'content', 0, 'filepath, filename', false);
+            foreach ($storedfiles as $sf) {
+                $entry = $build_entry($sf, $cm->name ?: $sf->get_filename(), 'resource', $cm->id);
+                // optional: Intro laden (für UI)
+                if ($cm->has_view()) {
+                    $res = $DB->get_record('resource', ['id' => $cm->instance], 'intro', IGNORE_MISSING);
+                    $entry['intro'] = $res->intro ?? null;
+                }
+                $files[] = $entry;
+            }
+        }
+
+        // b) FOLDER -> content/0/<pfad>/<datei>
+        if ($cm->modname === 'folder') {
+            $storedfiles = $fs->get_area_files($modctx->id, 'mod_folder', 'content', 0, 'filepath, filename', false);
+            foreach ($storedfiles as $sf) {
+                $displaypath = trim($sf->get_filepath(), '/');
+                $dn = $cm->name;
+                if ($displaypath !== '') { $dn .= ' / ' . $displaypath; }
+                $dn .= ' / ' . $sf->get_filename();
+
+                $entry = $build_entry($sf, $dn, 'folder', $cm->id);
+                // optional: Intro laden
+                $fld = $DB->get_record('folder', ['id' => $cm->instance], 'intro', IGNORE_MISSING);
+                $entry['intro'] = $fld->intro ?? null;
+                $files[] = $entry;
+            }
+        }
+    }
+
+    // 2) Kurs-Dateien: summary & overviewfiles (itemid i.d.R. 0)
+    foreach (['summary', 'overviewfiles'] as $area) {
+        $storedfiles = $fs->get_area_files($coursectx->id, 'course', $area, 0, 'filepath, filename', false);
+        foreach ($storedfiles as $sf) {
+            $dn = 'Course (' . $area . '): ' . $sf->get_filename();
+            $files[] = $build_entry($sf, $dn, 'course', null);
+        }
+    }
+
+    // 3) Optional: auf Webservice-URL + Token umbiegen (für externe SPAs)
+    //    => nur aktivieren, wenn du hier mit Token arbeiten willst
+    /*
+    $token = optional_param('ws_token', '', PARAM_ALPHANUMEXT); // z.B. via AJAX mitgeben
+    if (!empty($token)) {
+        foreach ($files as &$f) {
+            $wsurl = str_replace('/pluginfile.php/', '/webservice/pluginfile.php/', $f['url']);
+            $wsurl .= (strpos($wsurl, '?') === false ? '?' : '&') . 'token=' . urlencode($token);
+            $f['url'] = $wsurl;
+        }
+        unset($f);
+    }
+    */
+
+    return [
+        'success' => true,
+        'files' => $files,
+        'debug' => [
+            'course_id' => $course_id,
+            'total_files' => count($files),
+        ]
+    ];
+}
 /**
  * Get file type identifier from MIME type
  */
