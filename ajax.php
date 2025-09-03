@@ -371,7 +371,7 @@ function get_initial_project_files($runtime, $template = '') {
  */
 function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) {
     global $DB;
-    $test = "";
+    
     try {
         $prompt = clean_text($prompt);
         if (empty(trim($prompt))) {
@@ -387,14 +387,13 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
             }
         }
 
+        // Claude API Call (bleibt gleich)
         $claude_response = vibeyourcourse_call_claude_api($prompt, $project_files);
 
-        // DEBUGGING: Speichere für später
-        $test = " | Claude Response: " . print_r($claude_response, true);
         if (!$project) {
             $project_data = [
                 'name' => 'AI Project: ' . substr($prompt, 0, 40) . '...',
-                'runtime' => 'webcontainer',
+                'runtime' => 'javascript',
                 'template' => ''
             ];
             $new_project_result = create_project($vibeyourcourse_id, $userid, $project_data);
@@ -402,7 +401,29 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
             $project = $DB->get_record('vibeyourcourse_projects', ['id' => $project_id]);
         }
         
-        $updated_files = array_merge($project_files, (array)$claude_response->files);
+        // Vereinfachte File-Struktur für direktes HTML/CSS/JS
+        $files = $claude_response->files;
+        
+        // Stelle sicher, dass wir die wichtigsten Dateien haben
+        if (!isset($files->{'index.html'})) {
+            // Erstelle ein Standard HTML wenn keins vorhanden
+            $files->{'index.html'} = '<!DOCTYPE html>
+<html>
+<head>
+    <title>Generated App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+    <div id="app">
+        <h1>App wurde generiert!</h1>
+        <p>Überprüfe die Dateien im Code-Tab.</p>
+    </div>
+</body>
+</html>';
+        }
+        
+        $updated_files = array_merge($project_files, (array)$files);
         $project->project_files = json_encode($updated_files);
         $project->timemodified = time();
         $DB->update_record('vibeyourcourse_projects', $project);
@@ -421,7 +442,7 @@ function process_user_prompt($prompt, $project_id, $userid, $vibeyourcourse_id) 
             'response' => $claude_response->response,
             'files' => $updated_files,
             'interaction_id' => $interaction_id,
-            'webcontainer_ready' => true,
+            'preview_ready' => true,
             'message' => 'Project updated successfully by AI.'
         ];
         

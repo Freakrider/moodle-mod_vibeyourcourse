@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import './App.css'
-import WebContainerComponent from './WebContainer'
+import SimplePreview from './SimplePreview'
 import CodeViewer from './CodeViewer'
 
 function App() {
@@ -19,8 +19,7 @@ function App() {
   const [currentPrompt, setCurrentPrompt] = useState('')
   const [isProcessingPrompt, setIsProcessingPrompt] = useState(false)
   const [activeTab, setActiveTab] = useState('preview')
-  const [webcontainerOutput, setWebcontainerOutput] = useState([])
-  const [isWebcontainerActive, setIsWebcontainerActive] = useState(false)
+  const [consoleOutput, setConsoleOutput] = useState([])
   const [projectFiles, setProjectFiles] = useState({})
   const [currentFile, setCurrentFile] = useState('')
   const [courseFiles, setCourseFiles] = useState([])
@@ -54,7 +53,7 @@ function App() {
       loadProjects()
       loadCourseFiles()
     }
-  }, [config])
+  }, [config]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProjects = async () => {
     if (!config) return
@@ -212,16 +211,13 @@ function App() {
     setProjectFiles({})  // Alte Dateien löschen
     setCurrentFile('')   // Aktuelle Datei zurücksetzen
     setChatMessages([])  // Chat-Verlauf löschen
-    setWebcontainerOutput([]) // Console löschen
+    setConsoleOutput([]) // Console löschen
     
     // Projektdateien vom Server laden
     fetchProjectFiles(project.id)
     
     // Zur IDE wechseln
     setCurrentView('ide')
-    
-    // WebContainer beim Öffnen der IDE vorbereiten
-    setIsWebcontainerActive(true)
   }
 
   const closeIDE = () => {
@@ -294,8 +290,12 @@ function App() {
           setActiveTab('preview')
         }
         
-        // WebContainer starten
-        startWebContainer()
+        // Console-Message hinzufügen
+        const consoleMessage = {
+          timestamp: new Date(),
+          message: `Code generiert! ${Object.keys(result.files || {}).length} Dateien erstellt.`
+        }
+        setConsoleOutput(prev => [...prev, consoleMessage])
       } else {
         const errorContent = result.error || 'Entschuldigung, es gab einen Fehler bei der Verarbeitung deines Prompts.'
         const errorMessage = {
@@ -325,21 +325,7 @@ function App() {
     }
   }
 
-  const startWebContainer = () => {
-    console.log('Starting WebContainer for Hello World...')
-    
-    setIsWebcontainerActive(true)
-    
-    const webcontainerMessage = {
-      id: Date.now() + 2,
-      type: 'system',
-      content: 'WebContainer wird gestartet! Wechsle zum WebContainer-Tab um die App zu sehen.',
-      timestamp: new Date()
-    }
-    
-    setChatMessages(prev => [...prev, webcontainerMessage])
-    setActiveTab('preview')
-  }
+
 
   const loadDemoCodeForViewer = () => {
     // Demo-Funktion zum Testen des Code-Betrachters
@@ -455,12 +441,7 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
     handleProjectFilesUpdate(demoFiles)
   }
 
-  const handleWebcontainerOutput = (message) => {
-    setWebcontainerOutput(prev => [...prev, {
-      timestamp: new Date(),
-      message: message
-    }])
-  }
+
 
   const handleProjectFilesUpdate = (files) => {
     // Funktion zum Aktualisieren der Projektdateien für den Code-Betrachter
@@ -794,15 +775,12 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                     </div>
                   )}
                   
-                  {/* WebContainer Preview Tab */}
+                  {/* Simple Preview Tab */}
                   {activeTab === 'preview' && (
                     <div className="tab-pane fade show active h-100">
-                      <WebContainerComponent 
-                        key={currentProject?.id} // Re-mount bei Projektwechsel
-                        isActive={isWebcontainerActive}
-                        projectFiles={projectFiles} // Echte Projektdateien übergeben
-                        onOutput={handleWebcontainerOutput}
-                        onFilesUpdate={handleProjectFilesUpdate}
+                      <SimplePreview 
+                        projectFiles={projectFiles}
+                        isActive={Object.keys(projectFiles).length > 0}
                       />
                     </div>
                   )}
@@ -811,18 +789,18 @@ Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglich
                   {activeTab === 'console' && (
                     <div className="tab-pane fade show active h-100">
                       <div className="console h-100 bg-dark text-light p-2" style={{ fontFamily: 'monospace', overflow: 'auto' }}>
-                        <div className="text-info">🖥️ WebContainer Console</div>
-                        <div className="text-success">$ Waiting for commands...</div>
+                        <div className="text-info">🖥️ Simple Preview Console</div>
+                        <div className="text-success">$ Waiting for code generation...</div>
                         <div className="text-muted">---</div>
-                        {webcontainerOutput.map((output, index) => (
+                        {consoleOutput.map((output, index) => (
                           <div key={index} className="mt-1">
                             <span className="text-muted">{output.timestamp.toLocaleTimeString()}</span>
                             <span className="ml-2">{output.message}</span>
                           </div>
                         ))}
-                        {webcontainerOutput.length === 0 && (
+                        {consoleOutput.length === 0 && (
                           <div className="text-muted mt-2">
-                            Starte einen Prompt, um WebContainer-Output zu sehen...
+                            Starte einen Prompt, um Code zu generieren...
                           </div>
                         )}
                       </div>
