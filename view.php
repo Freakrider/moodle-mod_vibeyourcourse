@@ -70,6 +70,7 @@ $PAGE->set_heading(format_string($course->fullname));
 $PAGE->set_context($modulecontext);
 
 // Set Cross-Origin-Isolation headers for WebContainer
+// Diese Header werden jetzt von Nginx gesetzt
 header('Cross-Origin-Embedder-Policy: require-corp');
 header('Cross-Origin-Opener-Policy: same-origin');
 

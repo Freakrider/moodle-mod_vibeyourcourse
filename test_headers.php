@@ -26,22 +26,35 @@ header('Content-Type: text/html; charset=utf-8');
             results.innerHTML += `<p style="color: ${color}"><strong>${status} ${test}</strong> ${info}</p>`;
         }
         
+        // Debug: Alle verfügbaren APIs
+        results.innerHTML += '<h3>🔍 Debug-Informationen:</h3>';
+        results.innerHTML += `<p><strong>User Agent:</strong> ${navigator.userAgent}</p>`;
+        results.innerHTML += `<p><strong>URL:</strong> ${window.location.href}</p>`;
+        results.innerHTML += `<p><strong>Protocol:</strong> ${window.location.protocol}</p>`;
+        results.innerHTML += `<p><strong>Port:</strong> ${window.location.port}</p>`;
+        
         // Test 1: SharedArrayBuffer
         const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
-        addResult('SharedArrayBuffer verfügbar', hasSharedArrayBuffer);
+        addResult('SharedArrayBuffer verfügbar', hasSharedArrayBuffer, hasSharedArrayBuffer ? 'API gefunden' : 'API nicht verfügbar');
         
         // Test 2: crossOriginIsolated
         const isCrossOriginIsolated = crossOriginIsolated === true;
-        addResult('crossOriginIsolated aktiv', isCrossOriginIsolated);
+        addResult('crossOriginIsolated aktiv', isCrossOriginIsolated, isCrossOriginIsolated ? 'true' : 'false');
         
         // Test 3: Headers in Response
-        fetch(window.location.href)
+        fetch(window.location.href, { cache: 'no-store' })
             .then(response => {
                 const coep = response.headers.get('Cross-Origin-Embedder-Policy');
                 const coop = response.headers.get('Cross-Origin-Opener-Policy');
                 
                 addResult('COEP Header gesetzt', !!coep, coep ? `(${coep})` : '');
                 addResult('COOP Header gesetzt', !!coop, coop ? `(${coop})` : '');
+                
+                // Zusätzliche Header-Informationen
+                results.innerHTML += '<h3>📋 Alle Response-Header:</h3>';
+                response.headers.forEach((value, key) => {
+                    results.innerHTML += `<p><strong>${key}:</strong> ${value}</p>`;
+                });
                 
                 // Gesamtergebnis
                 const allPassed = hasSharedArrayBuffer && isCrossOriginIsolated && coep && coop;

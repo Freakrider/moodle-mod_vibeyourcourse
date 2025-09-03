@@ -14,21 +14,64 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
   const [url, setUrl] = useState('')
   const [iframeLoadingTimeout, setIframeLoadingTimeout] = useState(null)
   const [iframeLoaded, setIframeLoaded] = useState(false)
+  const [serverStarted, setServerStarted] = useState(false)
+  const serverReadyHandledRef = useRef(false)
 
-  useEffect(() => {
-    if (isActive && !webcontainer) {
-      initWebContainer()
-    }
-  }, [isActive])
+  // ENTFERNT: Automatische Initialisierung
+  // WebContainer wird nur auf Abruf gestartet (startWebContainer Button)
 
-  // Neu laden wenn sich Projektdateien ändern
-  useEffect(() => {
-    if (webcontainer && projectFiles && Object.keys(projectFiles).length > 0) {
-      onOutput?.('🔄 Projektdateien haben sich geändert, lade WebContainer neu...')
-      // WebContainer mit neuen Dateien neu erstellen
-      createProjectWithFiles(webcontainer)
+  // Manuelle Start-Funktion für WebContainer
+  const startWebContainer = async () => {
+    if (webcontainer) {
+      onOutput?.('♻️ WebContainer bereits gestartet!')
+      return
     }
-  }, [projectFiles])
+    
+    // Reset States
+    setServerStarted(false)
+    serverReadyHandledRef.current = false
+    setUrl('')
+    
+    onOutput?.('🚀 Manueller WebContainer-Start...')
+    await initWebContainer()
+  }
+
+  // ENTFERNT: Automatisches Neu-Laden bei Projektdateien-Änderung
+  // Projektdateien werden nur beim manuellen Start geladen
+
+  // URL wird für externe Links verwendet - kein iframe mehr nötig
+
+  // Hilfsfunktion: WebContainer-URL direkt verwenden (ohne Proxy)
+  const getProxyUrl = (originalUrl) => {
+    if (!originalUrl) return originalUrl
+    
+    // Prüfe, ob es eine WebContainer-URL ist
+    if (originalUrl.includes('webcontainer-api.io')) {
+      onOutput?.(`✅ Verwende direkte WebContainer-URL: ${originalUrl}`)
+      // Direkte URLs verwenden - Nginx-Proxy wurde korrigiert!
+      return originalUrl
+    }
+    
+    // Andere URLs unverändert zurückgeben
+    return originalUrl
+  }
+
+  // Test-Funktion: Prüfe ob WebContainer-URL erreichbar ist
+  const testWebContainerURL = async (url) => {
+    try {
+      onOutput?.(`🔍 TESTE WebContainer-URL: ${url}`)
+      const response = await fetch(url, { 
+        method: 'HEAD', 
+        mode: 'no-cors',
+        credentials: 'omit'
+      })
+      onOutput?.(`✅ WebContainer-URL Test erfolgreich`)
+      return true
+    } catch (error) {
+      onOutput?.(`❌ WebContainer-URL Test fehlgeschlagen: ${error.message}`)
+      throw error
+    }
+  }
 
   // Cleanup-Funktion wenn Komponente unmounted wird
   useEffect(() => {
@@ -51,6 +94,20 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
         setWebcontainer(globalWebContainerInstance)
         setIsBooted(true)
         onOutput?.('✅ WebContainer-Instanz wiederverwendet!')
+        
+        // Prüfe ob eine URL bereits verfügbar ist
+        try {
+          const existingUrl = await globalWebContainerInstance.url
+          if (existingUrl && !url) {
+            onOutput?.(`🔗 Wiederherstellung: Bestehende URL gefunden: ${existingUrl}`)
+            const finalUrl = getProxyUrl(existingUrl)
+            setUrl(finalUrl)
+            onOutput?.('✅ URL aus bestehender Instanz wiederhergestellt!')
+          }
+        } catch (error) {
+          onOutput?.('⚠️ Keine bestehende URL verfügbar - warte auf neue URL')
+        }
+        
         return
       }
 
@@ -127,7 +184,9 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
       await createFallbackPreview()
       
     } finally {
+      onOutput?.('🔧 Setze isLoading auf false...')
       setIsLoading(false)
+      onOutput?.('✅ isLoading ist jetzt false')
     }
   }
 
@@ -153,16 +212,36 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
 
     // Füge package.json hinzu wenn nicht vorhanden
     if (!files['package.json']) {
+      // Bestimme den richtigen Start-Befehl basierend auf den vorhandenen Dateien
+      let startScript = 'echo "No start script defined"'
+      
+      if (files['server.js']) {
+        startScript = 'node server.js'
+      } else if (files['index.js']) {
+        // Prüfe ob index.js ein Node.js Server ist oder nur Client-seitiges JS
+        const indexContent = projectFiles['index.js'] || ''
+        if (indexContent.includes('require(') || indexContent.includes('import ') || 
+            indexContent.includes('createServer') || indexContent.includes('express')) {
+          startScript = 'node index.js'
+        } else if (files['index.html']) {
+          // Wenn es eine HTML-Datei gibt, starte einen einfachen HTTP-Server
+          startScript = 'npx -y serve . -p 3000'
+        }
+      } else if (files['index.html']) {
+        // Reines Frontend-Projekt - verwende einen statischen Server
+        startScript = 'npx -y serve . -p 3000'
+      }
+      
       files['package.json'] = {
         file: {
           contents: JSON.stringify({
             name: 'ai-generated-project',
             version: '1.0.0',
             description: 'KI-generiertes Projekt von Vibe Your Course',
-            main: files['index.js'] ? 'index.js' : 'server.js',
+            main: files['index.js'] ? 'index.js' : 'index.html',
             scripts: {
-              start: files['server.js'] ? 'node server.js' : 'node index.js',
-              dev: files['server.js'] ? 'node server.js' : 'node index.js'
+              start: startScript,
+              dev: startScript
             },
             dependencies: {}
           }, null, 2)
@@ -195,32 +274,37 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
     onOutput?.('🚀 Starte Projekt-Server...')
 
     try {
-      // Warte auf Server-ready Event und hole die URL
-      instance.on('server-ready', (port, url) => {
+      // Starte Server nur einmal
+      if (serverStarted) {
+        onOutput?.('⚠️ Server bereits gestartet, überspringe...')
+        return
+      }
+      
+      setServerStarted(true)
+      
+      // Event-Handler für Server-Ready (einmalig)
+      const handleServerReady = (port, url) => {
+        if (serverReadyHandledRef.current) {
+          onOutput?.(`⚠️ SERVER-READY bereits behandelt, überspringe...`)
+          return
+        }
+        serverReadyHandledRef.current = true
+        
+        onOutput?.(`🎯 SERVER-READY EVENT empfangen!`)
         onOutput?.(`🔗 Server bereit auf Port ${port}`)
         onOutput?.(`🔗 App verfügbar unter: ${url}`)
-        onOutput?.(`🔍 URL-Typ: ${typeof url}, Length: ${url?.length}`)
-        setUrl(url)
-      })
-
-      // Versuche npm start oder fallback zu direkt node
-      let serverProcess
-      try {
-        serverProcess = await instance.spawn('npm', ['run', 'start'])
-        onOutput?.('📦 Server über npm start gestartet')
-      } catch (npmError) {
-        onOutput?.('⚠️ npm start fehlgeschlagen, versuche direkten Node.js Start...')
         
-        // Fallback: Finde eine .js Datei und starte sie direkt
-        const jsFiles = Object.keys(projectFiles).filter(f => f.endsWith('.js'))
-        if (jsFiles.length > 0) {
-          const mainFile = jsFiles.find(f => f.includes('server') || f.includes('index')) || jsFiles[0]
-          serverProcess = await instance.spawn('node', [mainFile])
-          onOutput?.(`🔧 Server direkt mit node ${mainFile} gestartet`)
-        } else {
-          throw new Error('Keine ausführbare JavaScript-Datei gefunden')
-        }
+        // Setze URL im State für externe Links
+        setUrl(url)
+        onOutput?.(`✅ URL State aktualisiert: ${url}`)
       }
+      
+      // Registriere Event-Handler
+      instance.on('server-ready', handleServerReady)
+
+      // Versuche npm start
+      const serverProcess = await instance.spawn('npm', ['run', 'start'])
+      onOutput?.('📦 Server über npm start gestartet')
 
       // Log Server-Output
       serverProcess.output.pipeTo(
@@ -237,7 +321,30 @@ function WebContainerComponent({ isActive, projectFiles, onOutput, onFilesUpdate
           const currentUrl = await instance.url
           if (currentUrl) {
             onOutput?.(`🔗 Fallback URL erhalten: ${currentUrl}`)
-            setUrl(currentUrl)
+            
+            // Teste die Fallback-URL auch
+            testWebContainerURL(currentUrl).then(() => {
+              onOutput?.('✅ Fallback-URL ist erreichbar!')
+              const finalUrl = getProxyUrl(currentUrl)
+              setUrl(finalUrl)
+              onOutput?.('✅ Fallback URL State aktualisiert')
+            }).catch(() => {
+              onOutput?.('❌ Fallback-URL ist NICHT erreichbar!')
+              // Warte nochmal 5 Sekunden
+              setTimeout(async () => {
+                try {
+                  const retryUrl = await instance.url
+                  if (retryUrl) {
+                    onOutput?.(`🔄 Retry URL erhalten: ${retryUrl}`)
+                    const finalUrl = getProxyUrl(retryUrl)
+                    setUrl(finalUrl)
+                    onOutput?.('⚠️ Retry URL State aktualisiert (ungetestet)')
+                  }
+                } catch (error) {
+                  onOutput?.('❌ Auch Retry-URL fehlgeschlagen')
+                }
+              }, 5000)
+            })
           }
         } catch (error) {
           onOutput?.('⚠️ Fallback URL noch nicht verfügbar, Server startet noch...')
@@ -442,13 +549,7 @@ require('./server.js');`
         })
       )
 
-      // Warte auf Server-ready Event und hole die URL
-      instance.on('server-ready', (port, url) => {
-        onOutput?.(`🔗 Server bereit auf Port ${port}`)
-        onOutput?.(`🔗 App verfügbar unter: ${url}`)
-        onOutput?.(`🔍 URL-Typ: ${typeof url}, Length: ${url?.length}`)
-        setUrl(url)
-      })
+      // Server-ready Event wird bereits oben behandelt
 
       // Fallback: Versuche URL nach kurzer Verzögerung zu holen falls server-ready Event nicht funktioniert
       setTimeout(async () => {
@@ -456,7 +557,30 @@ require('./server.js');`
           const currentUrl = await instance.url
           if (currentUrl) {
             onOutput?.(`🔗 Fallback URL erhalten: ${currentUrl}`)
-            setUrl(currentUrl)
+            
+            // Teste die Fallback-URL auch
+            testWebContainerURL(currentUrl).then(() => {
+              onOutput?.('✅ Fallback-URL ist erreichbar!')
+              const finalUrl = getProxyUrl(currentUrl)
+              setUrl(finalUrl)
+              onOutput?.('✅ Fallback URL State aktualisiert')
+            }).catch(() => {
+              onOutput?.('❌ Fallback-URL ist NICHT erreichbar!')
+              // Warte nochmal 5 Sekunden
+              setTimeout(async () => {
+                try {
+                  const retryUrl = await instance.url
+                  if (retryUrl) {
+                    onOutput?.(`🔄 Retry URL erhalten: ${retryUrl}`)
+                    const finalUrl = getProxyUrl(retryUrl)
+                    setUrl(finalUrl)
+                    onOutput?.('⚠️ Retry URL State aktualisiert (ungetestet)')
+                  }
+                } catch (error) {
+                  onOutput?.('❌ Auch Retry-URL fehlgeschlagen')
+                }
+              }, 5000)
+            })
           }
         } catch (error) {
           onOutput?.('⚠️ Fallback URL noch nicht verfügbar, Server startet noch...')
@@ -602,6 +726,11 @@ require('./server.js');`
     onOutput?.('💡 In Produktion würde echte WebContainer laufen')
   }
 
+  // Debug: Component State für Rendering
+  useEffect(() => {
+    onOutput?.(`🔍 RENDER DEBUG: isLoading=${isLoading}, isBooted=${isBooted}, url="${url}"`)
+  }, [isLoading, isBooted, url])
+
   return (
     <div className="webcontainer-component h-100">
       {isLoading ? (
@@ -617,35 +746,107 @@ require('./server.js');`
       ) : !isBooted ? (
         <div className="d-flex align-items-center justify-content-center h-100">
           <div className="text-center">
-            <h5>WebContainer nicht gestartet</h5>
-            <p className="text-muted">Klicken Sie auf einen Tab, um zu beginnen.</p>
+            <div className="mb-3">
+              <i className="fas fa-rocket fa-3x text-primary"></i>
+            </div>
+            <h5>WebContainer bereit zum Start</h5>
+            <p className="text-muted mb-4">
+              Starte eine vollständige Node.js-Umgebung direkt im Browser!<br/>
+              Mit Zugriff auf npm, Dateisystem und Prozessen.
+            </p>
+            
+            <button 
+              className="btn btn-primary btn-lg"
+              onClick={startWebContainer}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  WebContainer wird gestartet...
+                </>
+              ) : (
+                <>
+                  🚀 WebContainer starten
+                </>
+              )}
+            </button>
+            
+            <div className="mt-3">
+              <small className="text-muted">
+                💡 <strong>Tipp:</strong> WebContainer läuft vollständig im Browser - keine Server benötigt!
+              </small>
+            </div>
           </div>
         </div>
       ) : url ? (
         <div className="h-100 d-flex flex-column">
-          <div className="alert alert-success mb-2">
-            <strong>🎉 Erfolg!</strong> Deine Hello World App läuft! 
-            <a href={url} target="_blank" rel="noopener noreferrer" className="ml-2">
-              🔗 In neuem Tab öffnen
-            </a>
+          <div className="alert alert-info mb-3">
+            <h5>🚀 WebContainer-App ist bereit!</h5>
+            <p className="mb-3">
+              <strong>Hinweis:</strong> WebContainer-Apps können nicht in iframes geladen werden. 
+              Sie müssen in einem separaten Fenster geöffnet werden.
+            </p>
+            
+            <div className="d-flex gap-2 flex-wrap">
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  const popup = window.open(url, 'webcontainer-app', 'width=1200,height=800,scrollbars=yes,resizable=yes')
+                  if (popup) {
+                    onOutput?.('🔗 WebContainer-App in Popup geöffnet!')
+                  } else {
+                    onOutput?.('⚠️ Popup blockiert - verwende "In neuem Tab öffnen"')
+                  }
+                }}
+              >
+                🪟 In Popup öffnen
+              </button>
+              
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="btn btn-success"
+                onClick={() => onOutput?.('🔗 WebContainer-App in neuem Tab geöffnet!')}
+              >
+                🔗 In neuem Tab öffnen
+              </a>
+              
+              <button 
+                className="btn btn-secondary"
+                onClick={() => {
+                  navigator.clipboard.writeText(url)
+                  onOutput?.('📋 URL in Zwischenablage kopiert!')
+                }}
+              >
+                📋 URL kopieren
+              </button>
+            </div>
+            
+            <small className="d-block mt-2 text-muted">
+              🔍 Debug: {url}
+            </small>
           </div>
-          <iframe
-            ref={iframeRef}
-            src={url}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: '1px solid #ddd',
-              borderRadius: '4px'
-            }}
-            title="WebContainer App Preview"
-            onLoad={() => {
-              onOutput?.('📋 iframe erfolgreich geladen!')
-            }}
-            onError={(e) => {
-              onOutput?.(`❌ iframe Fehler: ${e.message || 'Unbekannter Fehler'}`)
-            }}
-          />
+          
+          <div className="flex-grow-1 d-flex align-items-center justify-content-center bg-light border rounded">
+            <div className="text-center p-4">
+              <div className="mb-3">
+                <i className="fas fa-external-link-alt fa-3x text-muted"></i>
+              </div>
+              <h5>WebContainer läuft extern</h5>
+              <p className="text-muted">
+                Die App läuft in einem separaten WebContainer-Prozess.<br/>
+                Verwende die Buttons oben, um sie zu öffnen.
+              </p>
+              
+              <div className="mt-3">
+                <small className="text-muted">
+                  💡 <strong>Tipp:</strong> WebContainer-Apps haben vollen Zugriff auf Node.js und npm!
+                </small>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="d-flex align-items-center justify-content-center h-100">

@@ -344,9 +344,7 @@ function App() {
   const loadDemoCodeForViewer = () => {
     // Demo-Funktion zum Testen des Code-Betrachters
     const demoFiles = {
-      'index.html': {
-        file: {
-          contents: `<!DOCTYPE html>
+      'index.html': `<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -360,14 +358,10 @@ function App() {
         <p>Dies ist eine Demo-Datei für den Code-Betrachter.</p>
         <button onclick="showMessage()">Klick mich!</button>
     </div>
-    <script src="script.js"></script>
+    <script src="index.js"></script>
 </body>
-</html>`
-        }
-      },
-      'styles.css': {
-        file: {
-          contents: `/* Demo CSS für Code-Betrachter */
+</html>`,
+      'styles.css': `/* Demo CSS für Code-Betrachter */
 .container {
     max-width: 600px;
     margin: 0 auto;
@@ -401,12 +395,8 @@ button {
 
 button:hover {
     background: #218838;
-}`
-        }
-      },
-      'script.js': {
-        file: {
-          contents: `// Demo JavaScript für Code-Betrachter
+}`,
+      'index.js': `// Demo JavaScript für Code-Betrachter
 function showMessage() {
     const messages = [
         "🎉 Der Code-Betrachter funktioniert!",
@@ -423,29 +413,20 @@ function showMessage() {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🎯 Demo-Code erfolgreich geladen!');
     console.log('👁️ Code-Betrachter Integration funktioniert!');
-});`
-        }
-      },
-      'package.json': {
-        file: {
-          contents: `{
+});`,
+      'package.json': `{
   "name": "demo-app",
   "version": "1.0.0",
   "description": "Demo-App für den Code-Betrachter",
   "main": "index.html",
   "scripts": {
-    "start": "serve .",
-    "dev": "serve . --port 3000"
+    "start": "echo 'Demo App läuft!' && python3 -m http.server 3000 || python -m SimpleHTTPServer 3000"
   },
   "keywords": ["demo", "code-viewer", "vibe-your-course"],
   "author": "KI Assistant",
   "license": "MIT"
-}`
-        }
-      },
-      'README.md': {
-        file: {
-          contents: `# 🚀 Demo App für Code-Betrachter
+}`,
+      'README.md': `# 🚀 Demo App für Code-Betrachter
 
 Dies ist eine Demo-Anwendung, um den Code-Betrachter im **Vibe Your Course** Plugin zu testen.
 
@@ -453,7 +434,7 @@ Dies ist eine Demo-Anwendung, um den Code-Betrachter im **Vibe Your Course** Plu
 
 - \`index.html\` - Hauptseite der App
 - \`styles.css\` - Styling für die App  
-- \`script.js\` - JavaScript-Funktionalität
+- \`index.js\` - JavaScript-Funktionalität
 - \`package.json\` - NPM-Konfiguration
 - \`README.md\` - Diese Dokumentation
 
@@ -469,8 +450,6 @@ Dies ist eine Demo-Anwendung, um den Code-Betrachter im **Vibe Your Course** Plu
 Der Code-Betrachter zeigt automatisch alle generierten Dateien an und ermöglicht es, durch sie zu navigieren, ohne dass CodeMirror benötigt wird.
 
 **Happy Coding! 🎉**`
-        }
-      }
     }
     
     handleProjectFilesUpdate(demoFiles)
